@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <error.h>
 #include <getopt.h>
-#include "chatClient.h"
+#include "chat.h"
 
 static struct option long_options[] = {
 	{"server",1,0,'s'},

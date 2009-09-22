@@ -20,7 +20,9 @@
 #include <error.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "chatClient.h"
+#include "chat.h"
+
+pthread_mutex_t console_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int main (int argc, char **argv) {
 
@@ -29,6 +31,11 @@ int main (int argc, char **argv) {
 	bzero(&server_opts,sizeof(struct server_options));
 	parse_cmdline(argc,argv,&server_opts);
 
+	printf("Welcome to Sam's chat client, %s. "
+	       "Connecting to %s on port %hu.\n",
+	       server_opts.username,
+	       server_opts.ip_string,
+	       server_opts.port_hostformat);
 
 	/* create a background thread to stay in touch with the server */
 	pthread_t server_polling_thread;
@@ -40,11 +47,11 @@ int main (int argc, char **argv) {
 	/* loop on the input prompt, waiting for commands */
 	char input[INPUT_BUF_SIZE];
 	while (1) {
-		printf("> ");
 		fgets(input,INPUT_BUF_SIZE,stdin);
-		if (strncmp(input,"list\n",INPUT_BUF_SIZE) == 0) {
+		if (strncmp(input,"/list\n",INPUT_BUF_SIZE) == 0) {
 			print_user_list();
-		} else if (strncmp(input,"quit\n",INPUT_BUF_SIZE) == 0) {
+		} else if (strncmp(input,"/quit\n",INPUT_BUF_SIZE) == 0 ||
+			   strncmp(input,"/bye\n",INPUT_BUF_SIZE) == 0) {
 			break;
 		} else {
 			printf("you entered: '%s'\n",input);

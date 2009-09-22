@@ -1,9 +1,9 @@
 DEBUG = -g
 LIBS = -pthread
 CFLAGS = -Wall -Werror $(DEBUG)
-SRC = main.c registration.c options.c
+SRC = main.c registration.c options.c client.c server.c
 OBJ = $(SRC:.c=.o)
-BIN = chatClient
+BIN = chat
 
 .PHONY: clean clobber 
 

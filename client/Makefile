@@ -7,7 +7,7 @@ BIN = chat
 
 .PHONY: clean clobber 
 
-%o:%c
+%o:%c chat.h
 	gcc $(CFLAGS) -c $<
 
 main: $(OBJ)

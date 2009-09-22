@@ -11,11 +11,11 @@
 #define PASSWORD_LEN 16
 #define USERNAME_LEN 14
 
-#define CLIENT_PORT 31181
+#define CLIENT_PORT 41180
 
 #define SERVER_TIMEOUT 60
 
-#define INPUT_BUF_SIZE 256
+#define INPUT_LEN 256
 
 /** structures **
 *****************/
@@ -51,6 +51,12 @@ void print_user_list(void);
 
 void parse_cmdline(int argc, char **argv, struct server_options *opts);
 void print_help(void);
+
+int client_connect(char *user);
+int server_accept(char *user);
+
+void send_message(int socket,char message[]);
+void recieve_message(int socket, char message[INPUT_LEN]);
 
 /** global variables **
  **********************/

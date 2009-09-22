@@ -36,7 +36,7 @@ void print_user_list(void) {
 
         /* UNSAFE CONCURRENT STUFF BEGINS */	
 	pthread_mutex_lock(&user_list_lock); /* NUMBER 1 */
-	pthread_mutex_lock(&console_lock);   /* NUMBER 2 */
+//	pthread_mutex_lock(&console_lock);   /* NUMBER 2 */
 	nusers = ntohl(user_list.nusers);
 	printf("%14s %15s %6s\n","USERNAME","IP ADDRESS","PORT");
 	for (i = 0; i < nusers && i < 50; i++) {
@@ -45,7 +45,7 @@ void print_user_list(void) {
 		inet_ntop(AF_INET,&(user_list.user[i].ip_addr),ip,INET_ADDRSTRLEN);
 		printf("%14s %15s %6d\n",username, ip, port);
 	}
-	pthread_mutex_unlock(&console_lock);   /* NUMBER 2 */
+//	pthread_mutex_unlock(&console_lock);   /* NUMBER 2 */
 	pthread_mutex_unlock(&user_list_lock); /* NUMBER 1 */
 	/* UNSAFE CONCURRENT STUFF ENDS */
 	

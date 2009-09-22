@@ -1,7 +1,7 @@
-DEBUG = 
-LIBS =
+DEBUG = -g
+LIBS = -pthread
 CFLAGS = -Wall -Werror $(DEBUG)
-SRC = chatClient.c
+SRC = main.c registration.c options.c
 OBJ = $(SRC:.c=.o)
 BIN = chatClient
 

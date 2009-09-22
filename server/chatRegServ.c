@@ -100,9 +100,10 @@ int main()
 
         e = gettimeofday(&timeVal, NULL);
         curtime = timeVal.tv_sec;
+	char ip[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET,&(cliAddr.sin_addr.s_addr),ip,INET_ADDRSTRLEN);
         printf("[%ld] Rcvd pkt from %s:%d\n",
-            curtime, inet_ntoa(cliAddr.sin_addr.s_addr),
-            ntohs(cliAddr.sin_port));
+	     curtime, ip, ntohs(cliAddr.sin_port));
         /* perform some checks */
         if (inMsgLen < 0) {
             printf("Error in recvfrom() errno=%d\n", errno);

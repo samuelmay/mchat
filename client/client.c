@@ -21,8 +21,12 @@
 #include <pthread.h>
 #include "chat.h"
 
-int client_connect(char *user) {
-	printf("connecting to user '%s'\n",user);
+void client_connect(struct connection *c) {
+	/* if we return on an error before we connect, this will make sure the
+	 * connection is still marked as unconnected. */
+	c->socket = -1;
+
+	printf_threadsafe("connecting to user '%s'\n",c->remote_user);
 
 	struct sockaddr_in server_addr;
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
@@ -34,7 +38,7 @@ int client_connect(char *user) {
 	int found = 0;
 	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
 		if (strncmp(user_list.user[i].username,
-			    user,
+			    c->remote_user,
 			    USERNAME_LEN) == 0) {
 			found = 1;
 			server_addr.sin_family = AF_INET;
@@ -48,22 +52,21 @@ int client_connect(char *user) {
 	/* UNSAFE CONCURRENT STUFF ENDS */
 
 	if (!found) {
-		printf("That user's not logged in!\n");
-		return -1;
+		printf_threadsafe("That user's not logged in!\n");
+		return;
 	}
 
-	/* create a socket */
-	int s;
-	if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+	/* create socket */
+	if ((c->socket = socket(AF_INET,SOCK_STREAM,0)) < 0) {
 		error(0,errno,"socket creation failed");
-		return -1;
+		return;
 	}
 
 	/* connect to the server */
-	if (connect(s,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
+	if (connect(c->socket,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
 		error(0,errno,"could not connect to server");
-		return -1;
+		c->socket = -1;
+		return;
 	}
-
-	return s;
+	return;
 }

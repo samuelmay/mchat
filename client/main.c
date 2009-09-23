@@ -25,7 +25,6 @@
 pthread_mutex_t console_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int main (int argc, char **argv) {
-	int connection_socket = -1;
 
 	/* get server connection details from command-line */
 	struct server_options server_opts;
@@ -45,42 +44,44 @@ int main (int argc, char **argv) {
 		       poll_server,
 		       &server_opts);
 
+	struct connection con;
+	con.socket = -1;
+
 	/* loop on the input prompt, waiting for commands */
 	char input[INPUT_LEN];
-	char remote_user [USERNAME_LEN];
 	while (1) {
-		bzero(input,INPUT_LEN);
+		bzero(input,INPUT_LEN*sizeof(char));
 		printf("> ");
 		fgets(input,INPUT_LEN,stdin);
 		if (strncmp(input,"list\n",INPUT_LEN) == 0) {
 			print_user_list();
 		} else if (strncmp(input,"connect ",8) == 0 &&
-			   sscanf(input,"connect %13s\n",remote_user) == 1) {
+			   sscanf(input,"connect %13s\n",con.remote_user) == 1) {
 			/* Initialize a TCP connection with a given user. */ 
-			connection_socket = client_connect(remote_user);
+			client_connect(&con);
 		} else if (strncmp(input,"listen\n",INPUT_LEN) == 0) {
 			/* Wait for a TCP connection from another user. */
-			connection_socket = server_accept(remote_user);
+			server_accept(&con);
+			receive_message(&con,input);
 		} else if (strncmp(input,"quit\n",INPUT_LEN) == 0 ||
 			   strncmp(input,"bye\n",INPUT_LEN) == 0) {
 			break;
 		} else if (strncmp(input,"msg ",4) == 0) {
 			/* remember to set the specifier length for the above
 			 * scanf to INPUT_LEN */
-			send_message(connection_socket,&(input[5]));
+			send_message(&con,&(input[4]));
 			bzero(input,INPUT_LEN);
-			recieve_message(connection_socket,input);
-			printf("message from %s: %s", remote_user,input);
+			receive_message(&con,input);
 		} else {
-		/* the 'ed' school of error reporting. */
-			printf("Unknown or invalid command.\n");
+			/* the 'ed' school of error reporting. */
+			printf_threadsafe("Unknown or invalid command.\n");
 		}
 	} 
 	/* don't care about the errors here. */
-	shutdown(connection_socket,SHUT_RDWR);
-	close(connection_socket);
+	shutdown(con.socket,SHUT_RDWR);
+	close(con.socket);
 
-	printf("Bye.\n");
+	printf_threadsafe("Bye.\n");
 	return 0;
 }	
 

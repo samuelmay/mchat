@@ -44,6 +44,12 @@ struct server_options {
 	char ip_string[INET_ADDRSTRLEN];
 };
 
+struct connection {
+	int socket;
+	char remote_user[USERNAME_LEN];
+	pthread_t listening_thread;
+};
+
 /** functions **
 ****************/
 void *poll_server (void *arg);
@@ -52,11 +58,11 @@ void print_user_list(void);
 void parse_cmdline(int argc, char **argv, struct server_options *opts);
 void print_help(void);
 
-int client_connect(char *user);
-int server_accept(char *user);
+void client_connect(struct connection *c);
+void server_accept(struct connection *c);
 
-void send_message(int socket,char message[]);
-void recieve_message(int socket, char message[INPUT_LEN]);
+void send_message(struct connection *c,char message[]);
+void receive_message(struct connection *c, char message[INPUT_LEN]);
 
 /** global variables **
  **********************/
@@ -77,4 +83,13 @@ extern pthread_mutex_t user_list_lock;
  * only the main thread uses that, and if we're printing to stderr we have more
  * pressing issues. */
 extern pthread_mutex_t console_lock;
+
+/* this is unfortunately GCC specific. DON'T EVER USE IF YOU HOLD ANOTHER
+ * LOCK. */
+#define printf_threadsafe(format,...) do {		\
+		pthread_mutex_lock(&console_lock);	\
+		printf(format, ## __VA_ARGS__);		\
+		pthread_mutex_unlock(&console_lock);	\
+	} while (0)
+
 #endif /* _CHATCLIENT_H_ */

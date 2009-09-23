@@ -17,14 +17,15 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <error.h>
+#include <pthread.h>
 #include "chat.h"
 
-void send_message(int socket, char message[]) {
+void send_message(struct connection *c, char message[]) {
 	int length = strlen(message);
-	if (socket < 0) {
-		printf("You're not connected to anyone!\n");
+	if (c->socket < 0) {
+		printf_threadsafe("You're not connected to anyone!\n");
 	} else {
-		if (send(socket,message,length,0) < 0) {
+		if (send(c->socket,message,length,0) < 0) {
 			/* non-fatal error */
 			error(0,errno,"failed to send message.");
 		}
@@ -32,13 +33,24 @@ void send_message(int socket, char message[]) {
 	return;
 }
 
-void recieve_message(int socket,char message[]) {
-	if (socket < 0) {
-		printf("You're not connected to anyone!\n");
+void receive_message(struct connection *c,char message[INPUT_LEN]) {
+	if (c->socket < 0) {
+		printf_threadsafe("You're not connected to anyone!\n");
 	} else {
-		if (recv(socket,message,INPUT_LEN,0) < 0) {
-			error(0,errno,"failed to recieve message.");
+		if (recv(c->socket,message,INPUT_LEN,0) < 0) {
+			error(0,errno,"failed to receive message.");
 		}
+		printf_threadsafe("%s says: %s\n",c->remote_user,message);
 	}
 	return;
+}
+
+void *receive_messages(void *arg) {
+	struct connection *c = (struct connection *)arg;
+	char buffer[INPUT_LEN];
+	while (1) {
+		receive_message(c,buffer);
+		printf_threadsafe("message from %s: %s\n",c->remote_user,buffer);
+	}
+	return NULL;
 }

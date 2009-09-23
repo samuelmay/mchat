@@ -21,14 +21,17 @@
 #include <pthread.h>
 #include "chat.h"
 
-int server_accept(char *user) {
+void server_accept(struct connection *c) {
+	/* if we return on an error before we connect, this will make sure the
+	 * connection is still marked as unconnected. */
+	c->socket = -1;
+
 	printf("listening for incoming connections...\n");
 	
-	/* create a socket */
-	int s1;
-	if ((s1 = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+	/* create socket */
+	if ((c->socket = socket(AF_INET,SOCK_STREAM,0)) < 0) {
 		error(0,errno,"socket creation failed");
-		return -1;
+		return;
 	}
 
 	struct sockaddr_in server_addr;
@@ -43,24 +46,31 @@ int server_accept(char *user) {
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(CLIENT_PORT);
 
-	if (bind(s1,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
+	if (bind(c->socket,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
 		error(0,errno,"failed to bind socket");
-		return -1;
+		c->socket = -1;
+		return;
 	}
 
-	if (listen(s1,1) < 0) {
+	if (listen(c->socket,1) < 0) {
 		error(0,errno,"failed to listen on socket");
-		return -1;
+		c->socket = -1;
+		return;
 	}
 
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
-	int s2;
-	if ((s2 = accept(s1,client_addr_p,&client_addr_len)) < 0) {
+	int s;
+	if ((s = accept(c->socket,client_addr_p,&client_addr_len)) < 0) {
 		error(0,errno,"failed to accept connection");
-		return -1;
+		c->socket = -1;
+		return;
+	} else {
+		/* use the newly created socket */
+		c->socket = s;
 	}
 
-	/* reverse look up user details, using IP address */
+	/* reverse look up user details, using IP address. This doesn't work on
+	 * localhost. */
         /* UNSAFE CONCURRENT STUFF BEGINS */	
 	pthread_mutex_lock(&user_list_lock);
 	int i;
@@ -68,7 +78,8 @@ int server_accept(char *user) {
 	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
 		if (user_list.user[i].ip_addr == client_addr.sin_addr.s_addr) {
 			found = 1;
-			strncpy(user,user_list.user[i].username,USERNAME_LEN);
+			strncpy(c->remote_user,
+				user_list.user[i].username,USERNAME_LEN);
 			break;
 		}
 	}
@@ -76,9 +87,9 @@ int server_accept(char *user) {
 	/* UNSAFE CONCURRENT STUFF ENDS */
 
 	if (!found) {
-		strncpy(user,"unknown",USERNAME_LEN);
+		strncpy(c->remote_user,"unknown",USERNAME_LEN);
 	}
 
-	printf("accepted incoming connection from %s.\n",user);
-	return s2;
+	printf("accepted incoming connection from %s.\n",c->remote_user);
+	return;
 }

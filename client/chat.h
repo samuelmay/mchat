@@ -11,7 +11,7 @@
 #define PASSWORD_LEN 16
 #define USERNAME_LEN 14
 
-#define CLIENT_PORT 41180
+#define CLIENT_PORT 31181
 
 #define SERVER_TIMEOUT 60
 

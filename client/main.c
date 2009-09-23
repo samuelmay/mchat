@@ -50,56 +50,37 @@ int main (int argc, char **argv) {
 	char remote_user [USERNAME_LEN];
 	while (1) {
 		bzero(input,INPUT_LEN);
+		printf("> ");
 		fgets(input,INPUT_LEN,stdin);
-		if (strncmp(input,"/list\n",INPUT_LEN) == 0) {
+		if (strncmp(input,"list\n",INPUT_LEN) == 0) {
 			print_user_list();
-		} else if (strncmp(input,"/talk",5) == 0) {
-			/* Initialize a TCP connection with a given user. */
-			sscanf(input,"/talk %13s\n",remote_user);
+		} else if (strncmp(input,"connect ",8) == 0 &&
+			   sscanf(input,"connect %13s\n",remote_user) == 1) {
+			/* Initialize a TCP connection with a given user. */ 
 			connection_socket = client_connect(remote_user);
-			/* the client should send the first message, make sure
-			 * we don't wait for one the first time */
-			continue;
-		} else if (strncmp(input,"/listen\n",INPUT_LEN) == 0) {
+		} else if (strncmp(input,"listen\n",INPUT_LEN) == 0) {
 			/* Wait for a TCP connection from another user. */
 			connection_socket = server_accept(remote_user);
-		} else if (strncmp(input,"/quit\n",INPUT_LEN) == 0 ||
-			   strncmp(input,"/bye\n",INPUT_LEN) == 0) {
+		} else if (strncmp(input,"quit\n",INPUT_LEN) == 0 ||
+			   strncmp(input,"bye\n",INPUT_LEN) == 0) {
 			break;
-		} else {
-			send_message(connection_socket,input);
-		}
-
-		if (connection_socket > 0) {
+		} else if (strncmp(input,"msg ",4) == 0) {
+			/* remember to set the specifier length for the above
+			 * scanf to INPUT_LEN */
+			send_message(connection_socket,&(input[5]));
 			bzero(input,INPUT_LEN);
 			recieve_message(connection_socket,input);
-			printf("message from %s: %s",remote_user,input);
-		} 
+			printf("message from %s: %s", remote_user,input);
+		} else {
+		/* the 'ed' school of error reporting. */
+			printf("Unknown or invalid command.\n");
+		}
 	} 
+	/* don't care about the errors here. */
+	shutdown(connection_socket,SHUT_RDWR);
+	close(connection_socket);
+
 	printf("Bye.\n");
 	return 0;
 }	
 
-void send_message(int socket, char message[]) {
-	int length = strlen(message);
-	if (socket < 0) {
-		printf("You're not connected to anyone!\n");
-	} else {
-		if (send(socket,message,length,0) < 0) {
-			/* non-fatal error */
-			error(0,errno,"failed to send message.");
-		}
-	}
-	return;
-}
-
-void recieve_message(int socket,char message[]) {
-	if (socket < 0) {
-		printf("You're not connected to anyone!\n");
-	} else {
-		if (recv(socket,message,INPUT_LEN,0) < 0) {
-			error(0,errno,"failed to recieve message.");
-		}
-	}
-	return;
-}

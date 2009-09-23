@@ -79,5 +79,6 @@ int server_accept(char *user) {
 		strncpy(user,"unknown",USERNAME_LEN);
 	}
 
+	printf("accepted incoming connection from %s.\n",user);
 	return s2;
 }

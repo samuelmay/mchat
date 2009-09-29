@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -25,7 +26,11 @@
  **********************/
 struct reg_resp user_list;
 pthread_mutex_t user_list_lock = PTHREAD_MUTEX_INITIALIZER;
-
+pthread_mutex_t server_update_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t server_update = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t server_update_lock; /* for some reason a mutex must always be
+				     * used with a condition variable. DO NOT
+				     * USE */
 
 void print_user_list(void) {
 	unsigned int i;
@@ -55,6 +60,14 @@ void print_user_list(void) {
 void *poll_server(void *arg) {
 	struct server_options *server_opts = arg; 
 	int socket_fd;
+
+	/* structs for dealing with time and sleeping */
+	int retval;
+	struct timespec timeout;
+	struct timeval time;
+
+	/* acquire condition variable lock */
+	pthread_mutex_lock(&server_update_lock);
 
 	/* create socket */
 	if ((socket_fd = socket(AF_INET,SOCK_DGRAM,0)) < 0) {
@@ -100,7 +113,14 @@ void *poll_server(void *arg) {
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */
 
-		sleep(SERVER_TIMEOUT/2);
+		/* set wait time, and sleep */
+		retval = gettimeofday(&time,NULL);
+		timeout.tv_sec = time.tv_sec + SERVER_TIMEOUT/2;
+//		timeout.tv_sec = time.tv_sec + 10; 
+		timeout.tv_nsec = time.tv_usec*100; 
+		retval = pthread_cond_timedwait(&server_update,
+						&server_update_lock,
+						&timeout);
 	}
 	return NULL;
 }

@@ -72,6 +72,10 @@ void *receive_messages(void *arg);
  **********************/
 extern struct reg_resp user_list;
 
+/* CONDITION VARIABLES */
+/* used to wake the registration server thread to update now */
+extern pthread_cond_t server_update;
+
 /* LOCKS */
 
 /* To prevent concurrency, each resource is assigned a lock and a

@@ -83,7 +83,8 @@ void server_accept(struct connection *c) {
 	int i;
 	int found = 0;
 	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
-		if (user_list.user[i].ip_addr == client_addr.sin_addr.s_addr) {
+		if (user_list.user[i].ip_addr == client_addr.sin_addr.s_addr &&
+		    user_list.user[i].tcp_port == client_addr.sin_port) {
 			found = 1;
 			strncpy(c->remote_user,
 				user_list.user[i].username,USERNAME_LEN);

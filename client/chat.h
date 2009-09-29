@@ -77,11 +77,11 @@ extern struct reg_resp user_list;
 extern pthread_cond_t server_update;
 
 /* LOCKS */
-
-/* To prevent concurrency, each resource is assigned a lock and a
- * number. Resource locks MUST be aquired in ascending numerical order, and
- * released in descending numerical order, on pain of the filthiest debugging
- * you will ever have to do. */
+/*********/
+/* To prevent deadlock, each resource is assigned a lock and a number. Resource
+ * locks MUST be aquired in ascending numerical order, and released in
+ * descending numerical order, on pain of the filthiest debugging you will ever
+ * have to do. */
 
 /* NUMBER 1 */
 extern pthread_mutex_t user_list_lock;

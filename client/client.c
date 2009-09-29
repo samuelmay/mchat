@@ -76,3 +76,17 @@ void client_connect(struct connection *c) {
 		       c);
 	return;
 }
+
+int send_message(struct connection *c, char message[INPUT_LEN]) {
+	int len = sizeof(char)*INPUT_LEN;
+	if (c->socket < 0) {
+		printf_threadsafe("You're not connected to anyone!\n");
+	} else {
+		if (send(c->socket,message,len,0) < len) {
+			/* non-fatal error */
+			error(0,errno,"failed to send message.");
+		}
+	}
+	/* connection is only detected closed when calling recv */
+	return 1;
+}

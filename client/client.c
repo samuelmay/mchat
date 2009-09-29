@@ -32,26 +32,7 @@ void client_connect(struct connection *c) {
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
 	bzero(server_addr_p,sizeof(struct sockaddr_in));
 	/* look up user details */
-        /* UNSAFE CONCURRENT STUFF BEGINS */	
-	pthread_mutex_lock(&user_list_lock);
-	int i;
-	int found = 0;
-	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
-		if (strncmp(user_list.user[i].username,
-			    c->remote_user,
-			    USERNAME_LEN) == 0) {
-			found = 1;
-			server_addr.sin_family = AF_INET;
-			server_addr.sin_port = user_list.user[i].tcp_port;
-			server_addr.sin_addr.s_addr = 
-				user_list.user[i].ip_addr;
-			break;
-		}
-	}
-	pthread_mutex_unlock(&user_list_lock);
-	/* UNSAFE CONCURRENT STUFF ENDS */
-
-	if (!found) {
+	if (!lookup_connection(&server_addr,c->remote_user)) {
 		printf_threadsafe("That user's not logged in!\n");
 		return;
 	}

@@ -64,7 +64,6 @@ void server_accept(struct connection *c) {
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
 	bzero(client_addr_p,sizeof(struct sockaddr_in));
 
-
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
 	int s;
 	if ((s = accept(c->socket,client_addr_p,&client_addr_len)) < 0) {
@@ -76,25 +75,8 @@ void server_accept(struct connection *c) {
 		c->socket = s;
 	}
 
-	/* reverse look up user details, using IP address. This doesn't work on
-	 * localhost. */
-        /* UNSAFE CONCURRENT STUFF BEGINS */	
-	pthread_mutex_lock(&user_list_lock);
-	int i;
-	int found = 0;
-	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
-		if (user_list.user[i].ip_addr == client_addr.sin_addr.s_addr &&
-		    user_list.user[i].tcp_port == client_addr.sin_port) {
-			found = 1;
-			strncpy(c->remote_user,
-				user_list.user[i].username,USERNAME_LEN);
-			break;
-		}
-	}
-	pthread_mutex_unlock(&user_list_lock);
-	/* UNSAFE CONCURRENT STUFF ENDS */
-
-	if (!found) {
+	/* reverse look up user details to get username */
+	if (!lookup_user(&client_addr,c->remote_user)) {
 		strncpy(c->remote_user,"unknown",USERNAME_LEN);
 	}
 

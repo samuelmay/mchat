@@ -53,7 +53,16 @@ struct connection {
 /** functions **
 ****************/
 void *poll_server (void *arg);
+
 void print_user_list(void);
+/* looks up user with the given connection details. Returns 1 if found, 0 if not
+ * found. */
+int lookup_user(struct sockaddr_in *connection,
+		char user[USERNAME_LEN]);
+/* looks up connection details for the given user. Returns 1 if found, 0 if not
+ * found. */
+int lookup_connection(struct sockaddr_in *connection,
+		      char user[USERNAME_LEN]);
 
 void parse_cmdline(int argc, char **argv, struct server_options *opts);
 void print_help(void);

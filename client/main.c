@@ -56,19 +56,19 @@ int main (int argc, char **argv) {
 		fgets(input,INPUT_LEN,stdin);
 		if (strncmp(input,"\n",INPUT_LEN) == 0) {
 			continue;
-		} else if (strncmp(input,"list",4) == 0) {
+		} else if (strncmp(input,"list\n",5) == 0) {
 			print_user_list();
-		} else if (strncmp(input,"update",6) == 0) {
+		} else if (strncmp(input,"update\n",7) == 0) {
 			pthread_cond_signal(&server_update);
 		} else if (strncmp(input,"connect ",8) == 0 &&
 			   sscanf(input,"connect %13s\n",con.remote_user) == 1) {
 			/* Initialize a TCP connection with a given user. */ 
 			client_connect(&con);
-		} else if (strncmp(input,"listen",6) == 0) {
+		} else if (strncmp(input,"listen\n",7) == 0) {
 			/* Wait for a TCP connection from another user. */
 			server_accept(&con);
-		} else if (strncmp(input,"quit",4) == 0 ||
-			   strncmp(input,"bye",3) == 0) {
+		} else if (strncmp(input,"quit\n",5) == 0 ||
+			   strncmp(input,"bye\n",4) == 0) {
 			break;
 		} else if (strncmp(input,"msg ",4) == 0) {
 			/* remember to set the specifier length for the above

@@ -57,6 +57,52 @@ void print_user_list(void) {
 	return;
 }
 
+/* looks up user with the given connection details. Returns 1 if found, 0 if not
+ * found. Does not work properly for clients on the same host. */
+int lookup_user(struct sockaddr_in *connection,
+		char user[USERNAME_LEN]) {
+	int i;
+	int found;
+	/* UNSAFE CONCURRENT STUFF BEGINS */	
+	pthread_mutex_lock(&user_list_lock);
+	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
+		if (user_list.user[i].ip_addr == connection->sin_addr.s_addr) {
+			found = 1;
+			strncpy(user,
+				user_list.user[i].username,USERNAME_LEN);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&user_list_lock);
+	/* UNSAFE CONCURRENT STUFF ENDS */
+	return found;
+}
+
+/* looks up connection details for the given user. Returns 1 if found, 0 if not
+ * found. */
+int lookup_connection(struct sockaddr_in *connection,
+		      char user[USERNAME_LEN]) {
+	int i;
+	int found = 0;
+        /* UNSAFE CONCURRENT STUFF BEGINS */	
+	pthread_mutex_lock(&user_list_lock);
+	for (i = 0; i < ntohl(user_list.nusers) && i < 50; i++) {
+		if (strncmp(user_list.user[i].username,
+			    user,
+			    USERNAME_LEN) == 0) {
+			found = 1;
+			connection->sin_family = AF_INET;
+			connection->sin_port = user_list.user[i].tcp_port;
+			connection->sin_addr.s_addr = 
+				user_list.user[i].ip_addr;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&user_list_lock);
+	/* UNSAFE CONCURRENT STUFF ENDS */
+	return found;
+}
+
 void *poll_server(void *arg) {
 	struct server_options *server_opts = arg; 
 	int socket_fd;

@@ -51,9 +51,11 @@ int main (int argc, char **argv) {
 	char input[INPUT_LEN];
 	while (1) {
 		bzero(input,INPUT_LEN*sizeof(char));
-		printf("> ");
+		printf_threadsafe("> ");
 		fgets(input,INPUT_LEN,stdin);
-		if (strncmp(input,"list\n",INPUT_LEN) == 0) {
+		if (strncmp(input,"\n",INPUT_LEN) == 0) {
+			continue;
+		} else if (strncmp(input,"list\n",INPUT_LEN) == 0) {
 			print_user_list();
 		} else if (strncmp(input,"connect ",8) == 0 &&
 			   sscanf(input,"connect %13s\n",con.remote_user) == 1) {
@@ -62,7 +64,6 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"listen\n",INPUT_LEN) == 0) {
 			/* Wait for a TCP connection from another user. */
 			server_accept(&con);
-			receive_message(&con,input);
 		} else if (strncmp(input,"quit\n",INPUT_LEN) == 0 ||
 			   strncmp(input,"bye\n",INPUT_LEN) == 0) {
 			break;
@@ -70,8 +71,6 @@ int main (int argc, char **argv) {
 			/* remember to set the specifier length for the above
 			 * scanf to INPUT_LEN */
 			send_message(&con,&(input[4]));
-			bzero(input,INPUT_LEN);
-			receive_message(&con,input);
 		} else {
 			/* the 'ed' school of error reporting. */
 			printf_threadsafe("Unknown or invalid command.\n");

@@ -61,9 +61,10 @@ void print_help(void);
 void client_connect(struct connection *c);
 void server_accept(struct connection *c);
 
-void send_message(struct connection *c,char message[]);
-void receive_message(struct connection *c, char message[INPUT_LEN]);
-
+/* returns 1 on success, 0 if connection was closed. */
+int send_message(struct connection *c,char message[INPUT_LEN]);
+int receive_message(struct connection *c, char message[INPUT_LEN]);
+void *receive_messages(void *arg);
 /** global variables **
  **********************/
 extern struct reg_resp user_list;

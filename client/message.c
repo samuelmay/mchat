@@ -20,37 +20,44 @@
 #include <pthread.h>
 #include "chat.h"
 
-void send_message(struct connection *c, char message[]) {
-	int length = strlen(message);
+int send_message(struct connection *c, char message[INPUT_LEN]) {
+	int len = sizeof(char)*INPUT_LEN;
 	if (c->socket < 0) {
 		printf_threadsafe("You're not connected to anyone!\n");
 	} else {
-		if (send(c->socket,message,length,0) < 0) {
+		if (send(c->socket,message,len,0) < len) {
 			/* non-fatal error */
 			error(0,errno,"failed to send message.");
 		}
 	}
-	return;
+	/* connection is only detected closed when calling recv */
+	return 1;
 }
 
-void receive_message(struct connection *c,char message[INPUT_LEN]) {
+int receive_message(struct connection *c,char message[INPUT_LEN]) {
+	int retval;
+	int len = sizeof(char)*INPUT_LEN;
 	if (c->socket < 0) {
 		printf_threadsafe("You're not connected to anyone!\n");
 	} else {
-		if (recv(c->socket,message,INPUT_LEN,0) < 0) {
+		retval = recv(c->socket,message,len,0);
+		if (retval == 0) {
+			/* closed connection at remote end */
+			return 0;
+		} else if (retval < len) {
 			error(0,errno,"failed to receive message.");
 		}
-		printf_threadsafe("%s says: %s\n",c->remote_user,message);
+		printf_threadsafe("\n%s says: %s",c->remote_user,message);
 	}
-	return;
+	return 1;
 }
 
 void *receive_messages(void *arg) {
 	struct connection *c = (struct connection *)arg;
 	char buffer[INPUT_LEN];
-	while (1) {
-		receive_message(c,buffer);
-		printf_threadsafe("message from %s: %s\n",c->remote_user,buffer);
+	while (receive_message(c,buffer)) {
+		bzero(buffer,INPUT_LEN*sizeof(char));
 	}
+	printf_threadsafe("\n%s closed the connection.\n", c->remote_user);
 	return NULL;
 }

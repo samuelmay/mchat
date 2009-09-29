@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <error.h>
 #include <pthread.h>
+/* #include <sys/select.h> */
 #include "chat.h"
 
 void server_accept(struct connection *c) {
@@ -91,5 +92,11 @@ void server_accept(struct connection *c) {
 	}
 
 	printf("accepted incoming connection from %s.\n",c->remote_user);
+
+	pthread_t receive_messages_thread;
+	pthread_create(&receive_messages_thread,
+		       NULL,
+		       receive_messages,
+		       c);
 	return;
 }

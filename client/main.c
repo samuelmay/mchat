@@ -26,26 +26,27 @@ pthread_mutex_t console_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int main (int argc, char **argv) {
 
-	/* get server connection details from command-line */
-	struct server_options server_opts;
-	bzero(&server_opts,sizeof(struct server_options));
-	parse_cmdline(argc,argv,&server_opts);
+	/* get registration server connection details from command-line */
+	struct server_options opts;
+	bzero(&opts,sizeof(struct server_options));
+	parse_cmdline(argc,argv,&opts);
 
-	printf("Welcome to Sam's chat client, %s. "
-	       "Connecting to %s on port %hu.\n",
-	       server_opts.username,
-	       server_opts.ip_string,
-	       server_opts.port_hostformat);
+	printf("Welcome to Sam's chat client, %s.\n", opts.username);
+
+	/* open local port to listen for incoming connections */
+	struct connection con;
+	con.socket = start_listening(&opts);
+	printf("Listening on port %hu.\n",opts.local_port_h);
 
 	/* create a background thread to stay in touch with the server */
+	printf("Connecting to %s on port %hu.\n", 
+	       opts.ip_string, 
+	       opts.server_port_h);
 	pthread_t server_polling_thread;
 	pthread_create(&server_polling_thread,
 		       NULL,
 		       poll_server,
-		       &server_opts);
-
-	struct connection con;
-	con.socket = -1;
+		       &opts);
 
 	/* loop on the input prompt, waiting for commands */
 	char input[INPUT_LEN];

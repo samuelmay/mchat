@@ -22,42 +22,48 @@
 /* #include <sys/select.h> */
 #include "chat.h"
 
-void server_accept(struct connection *c) {
-	/* if we return on an error before we connect, this will make sure the
-	 * connection is still marked as unconnected. */
-	c->socket = -1;
-
-	printf("listening for incoming connections...\n");
-	
-	/* create socket */
-	if ((c->socket = socket(AF_INET,SOCK_STREAM,0)) < 0) {
-		error(0,errno,"socket creation failed");
-		return;
+int start_listening(struct server_options *opts) {
+	/* create socket and start listening for incoming connections */
+	int s;
+	if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+		error(EXIT_FAILURE,errno,"listening socket creation failed");
 	}
 
 	struct sockaddr_in server_addr;
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
-	bzero(server_addr_p,sizeof(struct sockaddr_in));
+	socklen_t len = sizeof(struct sockaddr_in);
+	bzero(server_addr_p,len);
 
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	/* this will bind to any free port */
+	server_addr.sin_port = 0;
+
+	if (bind(s,server_addr_p,len) < 0) {
+		error(EXIT_FAILURE,errno,"failed to bind listening socket");
+	}
+
+	/* since we binded to any free port, get the actual port we binded to,
+	 * and set the options we will send to the registration server */
+	if (getsockname(s,server_addr_p,&len) < 0) {
+		error(EXIT_FAILURE,errno,"could not get port from bind");
+	}
+	opts->local_port = server_addr.sin_port;
+	opts->local_port_h = ntohs(server_addr.sin_port);
+	
+	if (listen(s,1) < 0) {
+		error(EXIT_FAILURE,errno,"failed to listen on listening socket");
+	}
+	
+	return s;
+}
+
+
+void server_accept(struct connection *c) {
 	struct sockaddr_in client_addr;
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
 	bzero(client_addr_p,sizeof(struct sockaddr_in));
 
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_port = htons(CLIENT_PORT);
-
-	if (bind(c->socket,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
-		error(0,errno,"failed to bind socket");
-		c->socket = -1;
-		return;
-	}
-
-	if (listen(c->socket,1) < 0) {
-		error(0,errno,"failed to listen on socket");
-		c->socket = -1;
-		return;
-	}
 
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
 	int s;

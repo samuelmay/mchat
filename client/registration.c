@@ -66,7 +66,7 @@ void *poll_server(void *arg) {
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
 	bzero(&server_addr,sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = server_opts->port;
+	server_addr.sin_port = server_opts->server_port;
 	server_addr.sin_addr = server_opts->ip;
 
 
@@ -78,7 +78,7 @@ void *poll_server(void *arg) {
 	bzero(&message,sizeof(struct reg_msg));
 	strncpy((char *)&message.password,server_opts->password,15);
 	strncpy((char *)&message.username,server_opts->username,13);
-	message.tcp_port = htons(CLIENT_PORT);
+	message.tcp_port = server_opts->local_port;
 
 	/* poll server continously, every 30s */
 	while (1) {

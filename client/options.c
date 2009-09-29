@@ -37,8 +37,8 @@ void set_ip(char *str,struct server_options *opts) {
 }	
 
 void set_port(unsigned short port, struct server_options *opts) {
-	opts->port_hostformat = port;
-	opts->port = htons(opts->port_hostformat); /* htons IS IMPORTANT!!! */
+	opts->server_port_h = port;
+	opts->server_port = htons(opts->server_port_h); /* htons IS IMPORTANT!!! */
 	return;
 }
 

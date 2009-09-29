@@ -11,8 +11,6 @@
 #define PASSWORD_LEN 16
 #define USERNAME_LEN 14
 
-#define CLIENT_PORT 31181
-
 #define SERVER_TIMEOUT 60
 
 #define INPUT_LEN 256
@@ -37,10 +35,12 @@ struct reg_resp {
 struct server_options {
 	char username[USERNAME_LEN];
 	char password[PASSWORD_LEN];
-	unsigned short port;
+	unsigned short server_port;
+	unsigned short local_port;
 	struct in_addr ip;
-	/* for human readableness */
-	unsigned short port_hostformat;
+	/* for human readableness */ 
+	unsigned short server_port_h;
+	unsigned short local_port_h;
 	char ip_string[INET_ADDRSTRLEN];
 };
 
@@ -61,10 +61,13 @@ void print_help(void);
 void client_connect(struct connection *c);
 void server_accept(struct connection *c);
 
+int start_listening(struct server_options *opts);
+
 /* returns 1 on success, 0 if connection was closed. */
 int send_message(struct connection *c,char message[INPUT_LEN]);
 int receive_message(struct connection *c, char message[INPUT_LEN]);
 void *receive_messages(void *arg);
+
 /** global variables **
  **********************/
 extern struct reg_resp user_list;

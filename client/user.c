@@ -19,7 +19,9 @@
 #include <errno.h>
 #include <error.h>
 #include <pthread.h>
-#include "chat.h"
+
+#include "user.h"
+#include "console.h"
 
 struct user user_list[50];
 int num_users;

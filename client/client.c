@@ -19,7 +19,11 @@
 #include <errno.h>
 #include <error.h>
 #include <pthread.h>
-#include "chat.h"
+
+#include "user.h"
+#include "options.h"
+#include "console.h"
+#include "connection.h"
 
 void client_connect(char remote_user[USERNAME_LEN]) {
 	int s;

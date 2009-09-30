@@ -20,13 +20,16 @@
 #include <error.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "chat.h"
+
+#include "user.h"
+#include "options.h"
+#include "registration.h"
 
 /** global variables **
  **********************/
-pthread_mutex_t server_update_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t server_update = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t server_update_lock; /* for some reason a mutex must always be
+pthread_mutex_t registration_update_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t registration_update = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t registration_update_lock; /* for some reason a mutex must always be
 				     * used with a condition variable. DO NOT
 				     * USE */
 
@@ -41,7 +44,7 @@ void *registration_thread(void *arg) {
 	struct timeval time;
 
 	/* acquire condition variable lock */
-	pthread_mutex_lock(&server_update_lock);
+	pthread_mutex_lock(&registration_update_lock);
 
 	/* create socket */
 	if ((socket_fd = socket(AF_INET,SOCK_DGRAM,0)) < 0) {
@@ -100,8 +103,8 @@ void *registration_thread(void *arg) {
 		timeout.tv_sec = time.tv_sec + SERVER_TIMEOUT/2;
 //		timeout.tv_sec = time.tv_sec + 10; 
 		timeout.tv_nsec = time.tv_usec*100; 
-		retval = pthread_cond_timedwait(&server_update,
-						&server_update_lock,
+		retval = pthread_cond_timedwait(&registration_update,
+						&registration_update_lock,
 						&timeout);
 	}
 	return NULL;

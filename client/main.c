@@ -20,7 +20,12 @@
 #include <error.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "chat.h"
+
+#include "user.h"
+#include "options.h"
+#include "console.h"
+#include "connection.h"
+#include "registration.h"
 
 pthread_mutex_t console_lock = PTHREAD_MUTEX_INITIALIZER;
 struct options opts;
@@ -74,7 +79,7 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"list\n",5) == 0) {
 			print_user_list();
 		} else if (strncmp(input,"update\n",7) == 0) {
-			pthread_cond_signal(&server_update);
+			pthread_cond_signal(&registration_update);
 		} else if (strncmp(input,"connect ",8) == 0 &&
 			   sscanf(input,"connect %13s\n",arg1) == 1) {
 			/* Initialize a TCP connection with a given user. */ 

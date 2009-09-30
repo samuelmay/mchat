@@ -22,7 +22,11 @@
 #include <pthread.h>
 #include <sys/select.h>
 #include <sys/time.h>
-#include "chat.h"
+
+#include "user.h"
+#include "options.h"
+#include "console.h"
+#include "connection.h"
 
 int start_listening(struct options *opts) {
 	/* create socket and start listening for incoming connections */

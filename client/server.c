@@ -59,61 +59,48 @@ int start_listening(struct server_options *opts) {
 }
 
 
-void server_accept(struct connection *c) {
+void *server_thread(void *arg) {
+	int server_socket = *((int *)arg);
+	char remote_user[USERNAME_LEN];
+	char buffer[INPUT_LEN];
+	int s;
+	int retval;
+	int len = sizeof(char)*INPUT_LEN;
+
 	struct sockaddr_in client_addr;
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
-	bzero(client_addr_p,sizeof(struct sockaddr_in));
 
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
-	int s;
-	if ((s = accept(c->socket,client_addr_p,&client_addr_len)) < 0) {
+
+	bzero(client_addr_p,sizeof(struct sockaddr_in));
+	if ((s = accept(server_socket,client_addr_p,&client_addr_len)) < 0) {
 		error(0,errno,"failed to accept connection");
-		c->socket = -1;
-		return;
+		server_socket = -1;
+		return NULL;
 	} else {
 		/* use the newly created socket */
-		c->socket = s;
+		server_socket = s;
 	}
 
 	/* reverse look up user details to get username */
-	if (!lookup_user(&client_addr,c->remote_user)) {
-		strncpy(c->remote_user,"unknown",USERNAME_LEN);
+	if (!lookup_user(&client_addr,remote_user)) {
+		strncpy(remote_user,"unknown",USERNAME_LEN);
 	}
-
-	printf("accepted incoming connection from %s.\n",c->remote_user);
-
-	pthread_t receive_messages_thread;
-	pthread_create(&receive_messages_thread,
-		       NULL,
-		       receive_messages,
-		       c);
-	return;
-}
-
-int receive_message(struct connection *c,char message[INPUT_LEN]) {
-	int retval;
-	int len = sizeof(char)*INPUT_LEN;
-	if (c->socket < 0) {
-		printf_threadsafe("You're not connected to anyone!\n");
-	} else {
-		retval = recv(c->socket,message,len,0);
+		
+	printf_threadsafe("\naccepted incoming connection from %s.\n",remote_user);
+		
+	while (1) {
+		retval = recv(server_socket,buffer,len,0);
 		if (retval == 0) {
 			/* closed connection at remote end */
-			return 0;
+			break;
 		} else if (retval < len) {
 			error(0,errno,"failed to receive message.");
 		}
-		printf_threadsafe("\n%s says: %s",c->remote_user,message);
-	}
-	return 1;
-}
-
-void *receive_messages(void *arg) {
-	struct connection *c = (struct connection *)arg;
-	char buffer[INPUT_LEN];
-	while (receive_message(c,buffer)) {
+		printf_threadsafe("\n%s says: %s",remote_user,buffer);
+			
 		bzero(buffer,INPUT_LEN*sizeof(char));
 	}
-	printf_threadsafe("\n%s closed the connection.\n", c->remote_user);
+	printf_threadsafe("\n%s closed the connection.\n", remote_user); 
 	return NULL;
 }

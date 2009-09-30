@@ -50,11 +50,6 @@ void client_connect(struct connection *c) {
 		return;
 	}
 	
-	pthread_t receive_messages_thread;
-	pthread_create(&receive_messages_thread,
-		       NULL,
-		       receive_messages,
-		       c);
 	return;
 }
 

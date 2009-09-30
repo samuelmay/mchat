@@ -58,7 +58,8 @@ struct user {
 
 /** functions **
 ****************/
-void *poll_server (void *arg);
+void *registration_thread (void *arg);
+void *server_thread(void *arg);
 
 void print_user_list(void);
 /* looks up user with the given connection details. Returns 1 if found, 0 if not
@@ -74,14 +75,12 @@ void parse_cmdline(int argc, char **argv, struct server_options *opts);
 void print_help(void);
 
 void client_connect(struct connection *c);
-void server_accept(struct connection *c);
+
 
 int start_listening(struct server_options *opts);
 
 /* returns 1 on success, 0 if connection was closed. */
 int send_message(struct connection *c,char message[INPUT_LEN]);
-int receive_message(struct connection *c, char message[INPUT_LEN]);
-void *receive_messages(void *arg);
 
 /** global variables **
  **********************/

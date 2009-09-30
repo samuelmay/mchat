@@ -30,7 +30,7 @@ pthread_mutex_t server_update_lock; /* for some reason a mutex must always be
 				     * used with a condition variable. DO NOT
 				     * USE */
 
-void *poll_server(void *arg) {
+void *registration_thread(void *arg) {
 	struct server_options *server_opts = arg; 
 	int socket_fd;
 	unsigned int i;

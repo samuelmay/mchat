@@ -34,19 +34,28 @@ int main (int argc, char **argv) {
 	printf("Welcome to Sam's chat client, %s.\n", opts.username);
 
 	/* open local port to listen for incoming connections */
-	struct connection con;
-	con.socket = start_listening(&opts);
+	int server_socket = start_listening(&opts);
 	printf("Listening on port %hu.\n",opts.local_port_h);
 
 	/* create a background thread to stay in touch with the server */
 	printf("Connecting to %s on port %hu.\n", 
 	       opts.ip_string, 
 	       opts.server_port_h);
-	pthread_t server_polling_thread;
-	pthread_create(&server_polling_thread,
+	pthread_t registration;
+	pthread_create(&registration,
 		       NULL,
-		       poll_server,
+		       registration_thread,
 		       &opts);
+
+	/* create a background thread to listen for incoming connections. */
+	pthread_t server;
+	pthread_create(&server,
+		       NULL,
+		       server_thread,
+		       &server_socket);
+
+	/* data for the connection we make with another user */
+	struct connection con;
 
 	/* loop on the input prompt, waiting for commands */
 	char input[INPUT_LEN];
@@ -64,9 +73,6 @@ int main (int argc, char **argv) {
 			   sscanf(input,"connect %13s\n",con.remote_user) == 1) {
 			/* Initialize a TCP connection with a given user. */ 
 			client_connect(&con);
-		} else if (strncmp(input,"listen\n",7) == 0) {
-			/* Wait for a TCP connection from another user. */
-			server_accept(&con);
 		} else if (strncmp(input,"quit\n",5) == 0 ||
 			   strncmp(input,"bye\n",4) == 0) {
 			break;

@@ -28,7 +28,7 @@ static struct option long_options[] = {
 	{"help",0,0,'h'}
 };
 
-void set_ip(char *str,struct server_options *opts) {
+void set_ip(char *str,struct options *opts) {
 	strncpy(opts->ip_string,str,INET_ADDRSTRLEN);
 	if (inet_aton(opts->ip_string,&(opts->ip)) == 0) {
 		error(EXIT_FAILURE,0,"invalid server IP address.");
@@ -36,23 +36,23 @@ void set_ip(char *str,struct server_options *opts) {
 	return;
 }	
 
-void set_port(unsigned short port, struct server_options *opts) {
+void set_port(unsigned short port, struct options *opts) {
 	opts->server_port_h = port;
 	opts->server_port = htons(opts->server_port_h); /* htons IS IMPORTANT!!! */
 	return;
 }
 
-void set_username(char *str,struct server_options *opts) {
+void set_username(char *str,struct options *opts) {
 	strncpy(opts->username,str,USERNAME_LEN);
 	return;
 }
 
-void set_password(char *str, struct server_options *opts) {
+void set_password(char *str, struct options *opts) {
 	strncpy(opts->password,str,PASSWORD_LEN);
 	return;
 }
 
-void parse_cmdline(int argc, char **argv, struct server_options *opts) {
+void parse_cmdline(int argc, char **argv, struct options *opts) {
 	char option;
 	unsigned short port; 	/* the only numeric option */
 	/* flags to let us know when we need to set defaults */

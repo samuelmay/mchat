@@ -39,7 +39,11 @@ void print_user_list(void) {
 		username = (char *)&(user_list[i].name);
 		port = ntohs(user_list[i].port);
 		inet_ntop(AF_INET,&(user_list[i].ip),ip,INET_ADDRSTRLEN);
-		printf("%14s %15s %6d\n",username, ip, port);
+		printf("%14s %15s %6d",username, ip, port);
+		if (user_list[i].socket != 0) {
+			printf(" (connected)");
+		}
+		printf("\n");
 	}
 	pthread_mutex_unlock(&console_lock);   /* NUMBER 2 */
 	pthread_mutex_unlock(&user_list_lock); /* NUMBER 1 */
@@ -48,48 +52,14 @@ void print_user_list(void) {
 	return;
 }
 
-/* looks up user with the given connection details. Returns 1 if found, 0 if not
- * found. Does not work properly for clients on the same host. */
-int lookup_user(struct sockaddr_in *connection,
-		char user[USERNAME_LEN]) {
+/* looks up user list entry for the given username details. Returns the index in
+ * the user list, or -1 if not found. MUST HOLD USER LIST LOCK. */
+int lookup_user(char name[USERNAME_LEN]) {
 	int i;
-	int found;
-	/* UNSAFE CONCURRENT STUFF BEGINS */	
-	pthread_mutex_lock(&user_list_lock);
 	for (i = 0; i < num_users && i < 50; i++) {
-		if (user_list[i].ip == connection->sin_addr.s_addr) {
-			found = 1;
-			strncpy(user,
-				user_list[i].name,USERNAME_LEN);
-			break;
+		if (strncmp(user_list[i].name,name,USERNAME_LEN) == 0) {
+			return i;
 		}
 	}
-	pthread_mutex_unlock(&user_list_lock);
-	/* UNSAFE CONCURRENT STUFF ENDS */
-	return found;
-}
-
-/* looks up connection details for the given user. Returns 1 if found, 0 if not
- * found. */
-int lookup_connection(struct sockaddr_in *connection,
-		      char user[USERNAME_LEN]) {
-	int i;
-	int found = 0;
-        /* UNSAFE CONCURRENT STUFF BEGINS */	
-	pthread_mutex_lock(&user_list_lock);
-	for (i = 0; i < num_users && i < 50; i++) {
-		if (strncmp(user_list[i].name,
-			    user,
-			    USERNAME_LEN) == 0) {
-			found = 1;
-			connection->sin_family = AF_INET;
-			connection->sin_port = user_list[i].port;
-			connection->sin_addr.s_addr = 
-				user_list[i].ip;
-			break;
-		}
-	}
-	pthread_mutex_unlock(&user_list_lock);
-	/* UNSAFE CONCURRENT STUFF ENDS */
-	return found;
+	return -1;
 }

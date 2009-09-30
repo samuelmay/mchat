@@ -32,7 +32,7 @@ struct reg_resp {
 	} user[50]; /* info about each user */
 };
 
-struct server_options {
+struct options {
 	char username[USERNAME_LEN];
 	char password[PASSWORD_LEN];
 	unsigned short server_port;
@@ -58,34 +58,38 @@ struct user {
 
 /** functions **
 ****************/
+
+/* registration.c */
 void *registration_thread (void *arg);
+
+/* server.c */
+int start_listening(struct options *opts);
 void *server_thread(void *arg);
+void accept_new_connection(int fd);
+void receive_message(int fd);
 
+/* user.c */
 void print_user_list(void);
-/* looks up user with the given connection details. Returns 1 if found, 0 if not
- * found. */
-int lookup_user(struct sockaddr_in *connection,
-		char user[USERNAME_LEN]);
-/* looks up connection details for the given user. Returns 1 if found, 0 if not
- * found. */
-int lookup_connection(struct sockaddr_in *connection,
-		      char user[USERNAME_LEN]);
+/* looks up user with the given connection details. Returns index into the user
+ * list if found, -1 otherwise */
+int lookup_user(char name[USERNAME_LEN]);
 
-void parse_cmdline(int argc, char **argv, struct server_options *opts);
+/* options.c */
+void parse_cmdline(int argc, char **argv, struct options *opts);
 void print_help(void);
 
-void client_connect(struct connection *c);
+/* client.c */
+void client_connect(char remote_user[USERNAME_LEN]);
+void broadcast_message(char message[INPUT_LEN]);
 
-
-int start_listening(struct server_options *opts);
-
-/* returns 1 on success, 0 if connection was closed. */
-int send_message(struct connection *c,char message[INPUT_LEN]);
 
 /** global variables **
  **********************/
 extern struct user user_list[50];
 extern int num_users;
+
+/* THIS IS READ ONLY!!! It is populated before any threads are started. */
+extern struct options opts;
 
 /* CONDITION VARIABLES */
 /* used to wake the registration server thread to update now */

@@ -31,7 +31,7 @@ pthread_mutex_t server_update_lock; /* for some reason a mutex must always be
 				     * USE */
 
 void *registration_thread(void *arg) {
-	struct server_options *server_opts = arg; 
+	struct options *server_opts = arg; 
 	int socket_fd;
 	unsigned int i;
 

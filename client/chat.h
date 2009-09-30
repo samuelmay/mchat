@@ -47,7 +47,13 @@ struct server_options {
 struct connection {
 	int socket;
 	char remote_user[USERNAME_LEN];
-	pthread_t listening_thread;
+};
+
+struct user {
+	char name[USERNAME_LEN];
+	unsigned short port;
+	unsigned long ip;
+	int socket;
 };
 
 /** functions **
@@ -79,7 +85,8 @@ void *receive_messages(void *arg);
 
 /** global variables **
  **********************/
-extern struct reg_resp user_list;
+extern struct user user_list[50];
+extern int num_users;
 
 /* CONDITION VARIABLES */
 /* used to wake the registration server thread to update now */

@@ -1,6 +1,9 @@
 #ifndef _REGISTRATION_H_
 #define _REGISTRATION_H_
 
+#include "options.h" 		/* for PASSWORD_LEN */
+#include "user.h"		/* for USERNAME_LEN and MAX_USERS */
+
 #define SERVER_TIMEOUT 60
 
 struct reg_msg {
@@ -15,7 +18,7 @@ struct reg_resp {
 		char username[USERNAME_LEN];
 		unsigned short tcp_port;
 		unsigned long ip_addr;
-	} user[50]; /* info about each user */
+	} user[MAX_USERS]; /* info about each user */
 };
 
 void *registration_thread (void *arg);

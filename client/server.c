@@ -57,7 +57,7 @@ int start_listening(struct options *opts) {
 	opts->local_port = server_addr.sin_port;
 	opts->local_port_h = ntohs(server_addr.sin_port);
 	
-	if (listen(s,1) < 0) {
+	if (listen(s,10) < 0) {
 		error(EXIT_FAILURE,errno,"failed to listen on listening socket");
 	}
 	

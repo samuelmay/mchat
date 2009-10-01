@@ -33,7 +33,7 @@ struct options opts;
 int main (int argc, char **argv) {
 
 	/* initialize global user list */
-	bzero(&user_list,50*sizeof(struct user));
+	bzero(&user_list,MAX_USERS*sizeof(struct user));
 	num_users = 0;
 
 	/* get registration server connection details from command-line */
@@ -83,7 +83,7 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"connect ",8) == 0 &&
 			   sscanf(input,"connect %13s\n",arg1) == 1) {
 			/* Initialize a TCP connection with a given user. */ 
-			client_connect(arg1);
+			connect_user(arg1);
 		} else if (strncmp(input,"quit\n",5) == 0 ||
 			   strncmp(input,"bye\n",4) == 0) {
 			break;

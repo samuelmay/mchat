@@ -2,6 +2,7 @@
 #define _USER_H_
 
 #define USERNAME_LEN 14
+#define MAX_USERS 50
 
 struct user {
 	char name[USERNAME_LEN];
@@ -17,7 +18,7 @@ void print_user_list(void);
 int lookup_user(char name[USERNAME_LEN]);
 
 /* GLOBAL VARIABLES */
-extern struct user user_list[50];
+extern struct user user_list[MAX_USERS];
 extern int num_users;
 
 /* LOCKS FOR THE GLOBAL VARIABLES */

@@ -25,7 +25,7 @@
 #include "console.h"
 #include "connection.h"
 
-void client_connect(char remote_user[USERNAME_LEN]) {
+void connect_user(char remote_user[USERNAME_LEN]) {
 	int s;
 	int i;
 	struct sockaddr_in server_addr;

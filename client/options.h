@@ -4,7 +4,7 @@
 #include "user.h"
 
 /* #define PASSWORD "3118miniproject" */
-#define DEFAULT_PASSWORD "3118miniproject"
+#define DEFAULT_PASSWORD "project"
 /* #define DEFAULT_SERVER_IP "149.171.92.193" */
 #define DEFAULT_SERVER_IP "127.0.0.1"
 #define DEFAULT_SERVER_PORT 31180
@@ -26,7 +26,7 @@ struct options {
 
 /* FUNCTIONS */
 void parse_cmdline(int argc, char **argv, struct options *opts);
-void print_help(void);
+void print_options_help(void);
 
 /* GLOBAL VARIABLES */
 /* THIS IS READ ONLY!!! It is populated before any threads are started. */

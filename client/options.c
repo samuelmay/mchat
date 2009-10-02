@@ -23,9 +23,9 @@
 
 static struct option long_options[] = {
 	{"server",1,0,'s'},
-	{"port",1,0,'p'},
+	{"port",1,0,'o'},
 	{"user",1,0,'u'},
-	{"password",1,0,'w'},
+	{"password",1,0,'p'},
 	{"help",0,0,'h'}
 };
 
@@ -69,7 +69,7 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 			got_ip = 1;
 			set_ip(optarg,opts);
 			break;
-		case 'p':
+		case 'o':
 			/* server port */
 			got_port = 1;
 			if (sscanf(optarg,"%hu",&port) < 0) {
@@ -82,13 +82,13 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 			got_username = 1;
 			set_username(optarg,opts);
 			break;
-		case 'w':
+		case 'p':
 			/* password */
 			got_password = 1;
 			set_password(optarg,opts);
 			break;
 		case 'h':
-			print_help();
+			print_options_help();
 			exit(EXIT_SUCCESS);
 			break;
 		default:
@@ -107,9 +107,22 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 	if (!got_username)
 		set_username(DEFAULT_USERNAME,opts);
 
+	if (!got_password)
+		set_password(DEFAULT_PASSWORD,opts);
+
 	return;
 }
 
-void print_help(void) {
-	printf("TODO\n");
+void print_options_help(void) {
+	printf("chat v0.1, copyright sam may 2009.\n"
+	       "A simple internat chat program.\n\n"
+	       "Options:\n"
+	       "  -s --server        IP of the chat server to connect to\n"
+	       "  -o --port          UDP port the server is running on (default 31180)\n"
+	       "  -p --password      Server password\n"
+	       "  -u --user          Username to register with the server (default 'guest')\n"
+	       "  -h --help          Print this help\n\n"
+	       "Example: chat -s 149.171.92.193 -o 31180 -u alice -p mypassword\n"
+	       "Once in the program, enter 'help' to get a list of commands.\n");
+	return;
 }

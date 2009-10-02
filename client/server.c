@@ -72,12 +72,6 @@ void *server_thread(void *arg) {
 	int max_fd;
 	struct timeval timeout;
 
-	/* update the fd listening set every second. It's important to have this
-	 * timeout, otherwise the list will never be updated with new outgoing
-	 * connections made by client_connect(). */
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-
 	/* start our main 'select' loop */
 	while (1) {
 		/* build up fd list from user list */
@@ -96,6 +90,13 @@ void *server_thread(void *arg) {
 		}
 		pthread_mutex_unlock(&user_list_lock);
 		/* END UNSAFE CONCURRENT STUFF */
+
+		/* update the fd listening set every second. It's important to have this
+		 * timeout, otherwise the list will never be updated with new outgoing
+		 * connections made by client_connect(). We need to set this every time
+		 * select() is called, as it is modified on success. */
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
 
 		/* poll! */
 		if (select(max_fd+1,&fds,NULL,NULL,&timeout) == -1) {
@@ -166,20 +167,17 @@ void receive_message(int fd) {
 	int i;
 	int retval;
 
-	/* they should send us their username */
-	if ((retval = recv(fd,remote_user,USERNAME_LEN,0)) < USERNAME_LEN) {
-		error(0,errno,
-		      "failed to recieve username for incoming message");
-	} else if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN) {
+	if ((retval = recv(fd,remote_user,USERNAME_LEN,0)) < USERNAME_LEN && 
+	    retval != 0) {
+		/* short read on username (message header) */
+		error(0,errno,"failed to recieve username for incoming message");
+	} else if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN &&
+		   retval != 0) {
+		/* short read on message */
 		error(0,errno,"failed to receive message.");
-	} else {
-		/* Print out the recieved message and the user that sent it*/
-		printf_threadsafe("\n%s says: %s",remote_user,buffer); 
-	}
-
-	/* closed connection at remote end. close socket and remove from user
-	 * list. */
-	if (retval == 0) {
+	} else if (retval == 0) {
+                /* closed connection at remote end. close socket and remove from
+                 * user list. */
 		printf_threadsafe("\n%s closed the connection.\n", remote_user); 
 		/* UNSAFE CONCURRENT STUFF BEGINS */
 		pthread_mutex_lock(&user_list_lock);
@@ -191,7 +189,11 @@ void receive_message(int fd) {
 		close(fd);
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */
-	}
+	} else {
+		/* Everything is good! Print out the recieved message and the
+		 * user that sent it. */
+		printf_threadsafe("\n%s says: %s",remote_user,buffer); 
+	} 
 
 	return;
 }

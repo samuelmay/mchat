@@ -81,12 +81,21 @@ void *server_thread(void *arg) {
 		/* BEGIN UNSAFE CONCURRENT STUFF */
 		pthread_mutex_lock(&user_list_lock); 		/* NUMBER 1 */
 		for (i = 0; i < num_users; i++) {
-			if (user_list[i].socket != 0) {
+			if (user_list[i].flags & USER_CONNECTED) {
 				FD_SET(user_list[i].socket,&fds); 
 				if (user_list[i].socket > max_fd) {
 					max_fd = user_list[i].socket;
 				}
+			} else if (user_list[i].socket != 0) {
+				/* this user was marked as disconnected, but the
+				 * socket was left open for us to close. Only
+				 * the server thread should close sockets, as
+				 * it's undefined if a socket is closed while we
+				 * are in the middle of a 'select'. */
+				close(user_list[i].socket);
+				user_list[i].socket = 0;
 			}
+			
 		}
 		pthread_mutex_unlock(&user_list_lock);
 		/* END UNSAFE CONCURRENT STUFF */
@@ -120,9 +129,13 @@ void *server_thread(void *arg) {
 
 void accept_new_connection(int fd) {
 	int s;
-	int retval;
 	int i;
 	char remote_user[USERNAME_LEN];
+	char ack[MESSAGE_LEN];
+	int cancel = 1;		/* because there is only one good outcome and
+				 * sooo many error cases, we close the socket by
+				 * default.*/
+
 	struct sockaddr_in client_addr;
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
@@ -130,16 +143,12 @@ void accept_new_connection(int fd) {
 	bzero(client_addr_p,sizeof(struct sockaddr_in));
 	if ((s = accept(fd,client_addr_p,&client_addr_len)) < 0) {
 		error(0,errno,"failed to accept connection");
+		close(s);
 		return;
 	}
 
 	/* they should send us their username */
-	retval = recv(s,remote_user,USERNAME_LEN,0);
-	if (retval == 0) {
-		error(0,errno,"connection was closed as soon as it was opened. WTF?");
-		close(s);
-		return;
-	} else if (retval < USERNAME_LEN) {
+	if (recv(s,remote_user,USERNAME_LEN,0) < USERNAME_LEN) {
 		error(0,errno,"failed to receive username from new connection.");
 		close(s);
 		return;
@@ -148,14 +157,35 @@ void accept_new_connection(int fd) {
 	/* reverse look up user details to get username */
 	/* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
+
 	if ((i = lookup_user(remote_user)) < 0) {
-		error(0,0,"received connection attempt from unknown user");
+		/* they're not on the user list. close unknown connection. */
+		strncpy(ack,"UNKNOWN",8);
+	} else if (user_list[i].flags & USER_BLOCKED) {
+		/* they're not wanted. Tell them they're blocked and close the
+		 * connection. */
+		strncpy(ack,"BLOCKED",8);
+	} else {
+		/* all good. */
+		strncpy(ack,"HI",8);
+		cancel = 0;
+	}
+
+	/* bit nervous about blocking on IO whilst holding the main lock. should
+	 * be ok? .... */
+	if (send(s,ack,MESSAGE_LEN,0) < MESSAGE_LEN) {
+		error(0,0,"failed to send connection ack");
+		cancel = 1;
+	}
+
+	if (cancel) {
 		close(s);
 	} else {
+		user_list[i].flags |= USER_CONNECTED; /* set the bit */
 		user_list[i].socket = s; 
 		printf_threadsafe("\naccepted incoming connection from %s.\n",
 			remote_user);
-	}
+	} 
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
 	return;
@@ -178,14 +208,17 @@ void receive_message(int fd) {
 	} else if (retval == 0) {
                 /* closed connection at remote end. close socket and remove from
                  * user list. */
-		printf_threadsafe("\n%s closed the connection.\n", remote_user); 
 		/* UNSAFE CONCURRENT STUFF BEGINS */
 		pthread_mutex_lock(&user_list_lock);
-		/* we don't care if they're not on the user list, seeing as we're
-		 * deleting them anyway. */
-		if ((i = lookup_user(remote_user)) >= 0) {
-			user_list[i].socket = 0; 
+		/* We don't care if they're not on the user list, seeing as
+		 * we're deleting them anyway. Also, look up the socket fd
+		 * because we didn't read the name. */
+		if ((i = lookup_socket(fd)) >= 0) {
+			user_list[i].flags &= ~USER_CONNECTED;/*clear the bit*/
+			user_list[i].socket = 0;
 		}
+		printf_threadsafe("\n%s closed their connection.\n", 
+				  user_list[i].name); 
 		close(fd);
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */

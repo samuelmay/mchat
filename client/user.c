@@ -42,8 +42,11 @@ void print_user_list(void) {
 		port = ntohs(user_list[i].port);
 		inet_ntop(AF_INET,&(user_list[i].ip),ip,INET_ADDRSTRLEN);
 		printf("%14s %15s %6d",username, ip, port);
-		if (user_list[i].socket != 0) {
+		if (user_list[i].flags & USER_CONNECTED) {
 			printf(" (connected)");
+		}
+		if (user_list[i].flags & USER_BLOCKED) {
+			printf(" (blocked)");
 		}
 		printf("\n");
 	}
@@ -60,6 +63,16 @@ int lookup_user(char name[USERNAME_LEN]) {
 	int i;
 	for (i = 0; i < num_users && i < 50; i++) {
 		if (strncmp(user_list[i].name,name,USERNAME_LEN) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int lookup_socket(int fd) {
+	int i;
+	for (i = 0; i < num_users && i < 50; i++) {
+		if (user_list[i].socket == fd) {
 			return i;
 		}
 	}

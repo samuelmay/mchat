@@ -26,6 +26,7 @@
 #include "console.h"
 #include "connection.h"
 #include "registration.h"
+#include "commands.h"
 
 pthread_mutex_t console_lock = PTHREAD_MUTEX_INITIALIZER;
 struct options opts;
@@ -76,6 +77,11 @@ int main (int argc, char **argv) {
 		fgets(input,INPUT_LEN,stdin);
 		if (strncmp(input,"\n",INPUT_LEN) == 0) {
 			continue;
+		} else if (strncmp(input,"msg ",4) == 0) {
+			/* remember to set the specifier length for the above
+			 * scanf to INPUT_LEN */
+			strncpy(arg1,&(input[4]),INPUT_LEN-4);
+			broadcast_message(arg1);
 		} else if (strncmp(input,"list\n",5) == 0) {
 			print_user_list();
 		} else if (strncmp(input,"update\n",7) == 0) {
@@ -84,14 +90,20 @@ int main (int argc, char **argv) {
 			   sscanf(input,"connect %13s\n",arg1) == 1) {
 			/* Initialize a TCP connection with a given user. */ 
 			connect_user(arg1);
+		} else if (strncmp(input,"disconnect ",11) == 0 &&
+			   sscanf(input,"disconnect %13s\n",arg1) == 1) {
+			disconnect(arg1);
+		} else if (strncmp(input,"block ",6) == 0 &&
+			   sscanf(input,"block %13s\n",arg1) == 1) {
+			block(arg1);
+		} else if (strncmp(input,"unblock ",8) == 0 &&
+			   sscanf(input,"unblock %13s\n",arg1) == 1) {
+			unblock(arg1);
+		} else if (strncmp(input,"help",4) == 0) {
+			help();
 		} else if (strncmp(input,"quit\n",5) == 0 ||
 			   strncmp(input,"bye\n",4) == 0) {
 			break;
-		} else if (strncmp(input,"msg ",4) == 0) {
-			/* remember to set the specifier length for the above
-			 * scanf to INPUT_LEN */
-			strncpy(arg1,&(input[4]),INPUT_LEN-4);
-			broadcast_message(arg1);
 		} else {
 			/* the 'ed' school of error reporting. */
 			printf_threadsafe("Unknown or invalid command.\n");

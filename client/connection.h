@@ -6,6 +6,8 @@
 
 /* The main TCP networking stuff. */
 
+#define MESSAGE_LEN 8		/* length of an application message */
+
 /* server.c */
 int start_listening(struct options *opts);
 void *server_thread(void *arg);

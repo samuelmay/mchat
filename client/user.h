@@ -9,13 +9,19 @@ struct user {
 	unsigned short port;
 	unsigned long ip;
 	int socket;
+	unsigned int flags; 	/* connected, blocked */
 };
+
+/* bitmasks for the flags */
+#define USER_CONNECTED 0x00000001
+#define USER_BLOCKED   0x00000002
 
 /* FUNCTIONS */
 void print_user_list(void);
 /* looks up user with the given connection details. Returns index into the user
  * list if found, -1 otherwise */
 int lookup_user(char name[USERNAME_LEN]);
+int lookup_socket(int fd);
 
 /* GLOBAL VARIABLES */
 extern struct user user_list[MAX_USERS];

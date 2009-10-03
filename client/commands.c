@@ -25,15 +25,15 @@ void block(char user[USERNAME_LEN]) {
 	pthread_mutex_lock(&user_list_lock);
 	i = lookup_user(user);
 	if (i < 0) {
-		printf_threadsafe("that user's not logged in!\n");
+		printf_threadsafe("that user's not logged in!\n\n");
 	} else if (user_list[i].flags & USER_BLOCKED) {
-		printf_threadsafe("that user's already blocked!\n");
+		printf_threadsafe("that user's already blocked!\n\n");
 	} else {
                 /* this also clears the 'connected' flag and thus disconnects
 		 * them as well */
 		user_list[i].flags &= ~USER_CONNECTED;
 		user_list[i].flags |= USER_BLOCKED;
-		printf_threadsafe("%s was blocked.\n",user);
+		printf_threadsafe("%s was blocked.\n\n",user);
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
@@ -46,12 +46,12 @@ void unblock(char user[USERNAME_LEN]) {
 	pthread_mutex_lock(&user_list_lock);
 	i = lookup_user(user);
 	if (i < 0) {
-		printf_threadsafe("that user's not logged in!\n");
+		printf_threadsafe("that user's not logged in!\n\n");
 	} else if (!(user_list[i].flags & USER_BLOCKED)) {
-		printf_threadsafe("that user's not blocked!\n");
+		printf_threadsafe("that user's not blocked!\n\n");
 	} else {
 		user_list[i].flags &= ~USER_BLOCKED;
-		printf_threadsafe("%s was unblocked.\n",user);
+		printf_threadsafe("%s was unblocked.\n\n",user);
 	} 
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
@@ -64,12 +64,12 @@ void disconnect(char user[USERNAME_LEN]) {
 	pthread_mutex_lock(&user_list_lock);
 	i = lookup_user(user);
 	if (i < 0) {
-		printf_threadsafe("that user's not logged in!\n");
+		printf_threadsafe("that user's not logged in!\n\n");
 	} else if (!(user_list[i].flags & USER_CONNECTED)) {
-		printf_threadsafe("you're not connected to that user!\n");
+		printf_threadsafe("you're not connected to that user!\n\n");
 	} else {
 		user_list[i].flags &= ~USER_CONNECTED;
-		printf_threadsafe("%s was disconnected.\n",user);
+		printf_threadsafe("%s was disconnected.\n\n",user);
 	} 	
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
@@ -77,6 +77,6 @@ void disconnect(char user[USERNAME_LEN]) {
 }
 
 void help(void) {
-	printf_threadsafe("TODO (sorry)\n");
+	printf_threadsafe("TODO (sorry)\n\n");
 	return;
 }

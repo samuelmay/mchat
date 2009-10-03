@@ -41,9 +41,9 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 	pthread_mutex_lock(&user_list_lock);
 	i = lookup_user(remote_user);
 	if (i < 0) {
-		printf_threadsafe("that user's not logged in!\n");
+		printf_threadsafe("that user's not logged in!\n\n");
 	} else if (user_list[i].socket != 0) {
-		printf_threadsafe("you're already connected to that user!\n");
+		printf_threadsafe("you're already connected to that user!\n\n");
 	} else {
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_port = user_list[i].port;
@@ -60,13 +60,13 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 			   < MESSAGE_LEN) {
 			error(0,errno,"failed to recieve ack");
 		} else if (strncmp(ack,"UNKNOWN",MESSAGE_LEN) == 0) {
-			printf_threadsafe("%s says they don't know you.\n",
+			printf_threadsafe("%s says they don't know you.\n\n",
 					  remote_user);
 		} else if (strncmp(ack,"BLOCKED",MESSAGE_LEN) == 0) {
-			printf_threadsafe("%s has blocked you!\n",
+			printf_threadsafe("%s has blocked you!\n\n",
 					  remote_user);
 		} else if (strncmp(ack,"HI",MESSAGE_LEN) == 0) {
-			printf_threadsafe("connecting to user '%s'\n",remote_user);
+			printf_threadsafe("connecting to user %s\n\n",remote_user);
 			/* enter our new connection! */
 			user_list[i].flags |= USER_CONNECTED;
 			user_list[i].socket = s;

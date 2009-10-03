@@ -225,7 +225,7 @@ void receive_message(int fd) {
 	} else {
 		/* Everything is good! Print out the recieved message and the
 		 * user that sent it. */
-		printf_threadsafe("\n%s says: %s",remote_user,buffer); 
+		printf_threadsafe("\n%s says: %s\n",remote_user,buffer); 
 	} 
 
 	return;

@@ -77,10 +77,10 @@ int main (int argc, char **argv) {
 		fgets(input,INPUT_LEN,stdin);
 		if (strncmp(input,"\n",INPUT_LEN) == 0) {
 			continue;
-		} else if (strncmp(input,"msg ",4) == 0) {
+		} else if (strncmp(input,"msg ",4) == 0 &&
+			   sscanf(input,"msg %255s\n",arg1) == 1) {
 			/* remember to set the specifier length for the above
 			 * scanf to INPUT_LEN */
-			strncpy(arg1,&(input[4]),INPUT_LEN-4);
 			broadcast_message(arg1);
 		} else if (strncmp(input,"list\n",5) == 0) {
 			print_user_list();
@@ -102,7 +102,10 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"help",4) == 0) {
 			help();
 		} else if (strncmp(input,"quit\n",5) == 0 ||
-			   strncmp(input,"bye\n",4) == 0) {
+			   strncmp(input,"bye\n",4) == 0 || 
+			   strlen(input) == 0) {
+			/* if the length of the input is 0, someone hit
+			 * Ctrl-D */
 			break;
 		} else {
 			/* the 'ed' school of error reporting. */

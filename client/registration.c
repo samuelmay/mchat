@@ -37,6 +37,11 @@ void *registration_thread(void *arg) {
 	struct options *server_opts = arg; 
 	int socket_fd;
 	unsigned int i;
+	int j;
+
+	/* we build a new user list from the server response here, before
+	 * copying it over to the real one. */
+	struct user tmp_user_list[MAX_USERS];
 
 	/* structs for dealing with time and sleeping */
 	int retval;
@@ -86,15 +91,37 @@ void *registration_thread(void *arg) {
 
 		/* UNSAFE CONCURRENT STUFF BEGINS */
 		pthread_mutex_lock(&user_list_lock);
-		/* update user list */
-		num_users = ntohl(response.nusers);
-		for (i = 0; i < num_users; i++) {
-			strncpy(user_list[i].name,
+		/* copy response info into temporary user list. Use the flags
+		 * from the existing user list if they are there.
+		 *
+		 * IMPORTANT: Assume the server returns user information in
+		 * alphabetical/sorted order. I know the current server
+		 * implementation does this. CHECK THIS ASSUMPTION otherwise the
+		 * binary search used in lookup_user() will not work.
+		 */
+		for (i = 0; i < ntohl(response.nusers); i++) {
+			strncpy(tmp_user_list[i].name,
 				response.user[i].username,
 				USERNAME_LEN);
-			user_list[i].port = response.user[i].tcp_port;
-			user_list[i].ip = response.user[i].ip_addr;
+			tmp_user_list[i].port = response.user[i].tcp_port;
+			tmp_user_list[i].ip = response.user[i].ip_addr;
+			j = lookup_user(response.user[i].username);
+			if (j >= 0) {
+				/* we know this user, preserve existing
+				 * connection details */
+				tmp_user_list[i].flags = user_list[j].flags;
+				tmp_user_list[i].socket = user_list[j].socket;
+			} else {
+				/* new user, initialize connection fields to
+				 * zero */
+				tmp_user_list[i].flags = 0;
+				tmp_user_list[i].socket = 0;
+			}
 		}
+		/* update user list */
+		num_users = ntohl(response.nusers);
+		memcpy(user_list,tmp_user_list,
+		       num_users*sizeof(struct user));
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */
 

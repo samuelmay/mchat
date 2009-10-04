@@ -3,46 +3,42 @@ Threads
 
 * Main thread: Console loop. Dispatches commands, as detailed in 'COMMANDS'
   section.
-  FILES: main.c message.c, client.c
-  CONTENDS: user list, server options, connection list
+  FILES: main.c, commands.c, client.c
 
 * Registration thread: simply throws a UDP packet at the registration server
-  every 30 seconds, updates the user list with the response, and goes back to
-  sleep.
+  every 30 seconds, updates the user list with the response (carefully!), and
+  goes back to sleep.
   FILES: registration.c
-  CONTENDS: user list, server options.
 
 * Incoming connection server: uses select() to wait for a readable socket, and
-  either accepts the connection and notifies user, or receives message and
-  writes to the console.
+  either a) accepts a new connection and notifies user b) cleans up a closed
+  socket or c) receives message and writes to the console.
   FILES: server.c
-  CONTENDS: console, connection list
 
 Resources
 ---------
 
 (Globally visible, require mutex/locks to access)
 
-User list: Main list of users. Flat array in the exact binary form of a
-registration response. % TODO use actual data structure
-
-Connection list: linked list of open socket file descriptors, with the remote
-names. % TODO see if I can combine with user list
+User list: Main list of users. Code in user.c and user.h An array of 'struct
+user', sorted by username, along with an int 'num_users' holding the number of
+entries. Two search functions exist: lookup_user(), which searches for a
+username using binary search (fast!), and lookup_socket(), which searches for a
+file descriptor linearly (slow, used only once in server.c when a connection is
+closed).
 
 Output console: stdout. We want all printing to the screen to be in coherent
-blocks. (% TODO possibly lock when reading stdin as well?)
+blocks. (TODO possibly lock when reading stdin as well?)
 
 Startup
 -------
 
 * parse command line as per 'options.c', putting results in options struct.
 
+* create and bind listening socket. if no port was specified, get random free
+  port.
+
 * start server thread:
-  - create and bind listening socket.
-  % TODO automatic port selection: bind to port 0, get actual port number, and
-    update options struct.
-  - create poll group, add listening socket
-  - start thread
 
 * start registration thread
 
@@ -52,28 +48,40 @@ Commands
 --------
 
 * list: print out the user list
-  RESOURCES: user list, console.
+  FILES: user.c
+  FUNCTIONS: print_user_list()
   PROCEDURE: Loop through user list and print to console.
 
 * connect <username>: initiate connection with someone on the user list
-  RESOURCES: user list, connection list
+  FILES: client.c
+  FUNCTIONS: connect_user()
   PROCEDURE: Check if that's a logged-on user; Check if we don't already have a
-  connection; if not, create connection and add to connection list; add user to
-  poll set.
+  connection; if not, create connection and set 'connected' flag.
 
 * disconnect <username>: disconnect with someone
-  RESOURCES: connection list
-  PROCEDURE: Check if we have a connection, if so, close connection, remove from
-  connection list, and remove from poll set.
+  FILES: commands.c
+  FUNCTIONS: disconnect()
+  PROCEDURE: Check if we have a connection, if so, clear 'connected' flag in
+  the user entry; the server thread will garbage collect the socket.
 
-* msg: send message to all connected users
-  RESOURCES: connection list
+* msg: send message to all connected users. TODO: allow messages to individual 
+  connected users.
+  FILES: client.c
+  FUNCTIONS: broadcast_message().
   PROCEDURE: send buffer to each open socket in turn.
 
-* quit/bye: exit
-  RESOURCES: everything and nothing.
+* quit/bye/Ctrl-D: exit
+  FILES: main.c
+  FUNCTIONS:
   PROCEDURE: kill all threads, close all open sockets.
 
-%% TODOs
-* msg <username>: send a message to just one user
-* block <username>: prevent user from connecting with you
+* block/unblock: block a user from connecting to you
+  FILES: commands.c
+  FUNCTIONS: block() unblock()
+  PROCEDURE: if a valid user, set/clear 'blocked' flag in user entry.
+
+* help: self-explanatory.
+  FILES: commands.c
+  FUNCTIONS: help()
+  PROCEDURE: print out help.
+

@@ -35,7 +35,7 @@ pthread_mutex_t registration_update_lock; /* for some reason a mutex must always
 void *registration_thread(void *arg) {
 	struct options *server_opts = arg; 
 	int socket_fd;
-	unsigned int i;
+	u_int32_t i;
 	int j;
 
 	/* we build a new user list from the server response here, before
@@ -81,6 +81,7 @@ void *registration_thread(void *arg) {
 	while (1) {
   		/* what do you know huh, porting programs does reveal bugs */
 		addr_len=sizeof(struct sockaddr_in);
+		bzero(&tmp_user_list,MAX_USERS*sizeof(struct user));
 
 		/* printf("sending registration message to server..."); */
 		if (sendto(socket_fd, &message, message_len, 0,

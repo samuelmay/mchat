@@ -23,7 +23,7 @@
 #include "console.h"
 
 struct user user_list[MAX_USERS];
-int num_users;
+u_int32_t num_users;
 pthread_mutex_t user_list_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void print_user_list(void) {

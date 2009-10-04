@@ -9,12 +9,12 @@ struct user {
 	u_int16_t port;
 	u_int32_t ip;
 	int socket;
-	unsigned int flags; 	/* connected, blocked */
+	u_int8_t flags; 	/* connected, blocked */
 };
 
 /* bitmasks for the flags */
-#define USER_CONNECTED 0x00000001
-#define USER_BLOCKED   0x00000002
+#define USER_CONNECTED 0x01
+#define USER_BLOCKED   0x02
 
 /* FUNCTIONS */
 void print_user_list(void);
@@ -25,7 +25,7 @@ int lookup_socket(int fd);
 
 /* GLOBAL VARIABLES */
 extern struct user user_list[MAX_USERS];
-extern int num_users;
+extern u_int32_t num_users;
 
 /* LOCKS FOR THE GLOBAL VARIABLES */
 /* To prevent deadlock, each resource is assigned a lock and a number. Resource

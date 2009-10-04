@@ -3,10 +3,9 @@
 
 #include "user.h"
 
-/* #define PASSWORD "3118miniproject" */
-#define DEFAULT_PASSWORD "project"
-/* #define DEFAULT_SERVER_IP "149.171.92.193" */
-#define DEFAULT_SERVER_IP "127.0.0.1"
+#define DEFAULT_PASSWORD "3118miniproject"
+#define DEFAULT_SERVER_IP "149.171.92.193"
+/* #define DEFAULT_SERVER_IP "127.0.0.1" */
 #define DEFAULT_SERVER_PORT 31180
 #define DEFAULT_USERNAME "guest"
 

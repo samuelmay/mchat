@@ -37,9 +37,15 @@ void set_ip(char *str,struct options *opts) {
 	return;
 }	
 
-void set_port(unsigned short port, struct options *opts) {
+void set_server_port(unsigned short port, struct options *opts) {
 	opts->server_port_h = port;
-	opts->server_port = htons(opts->server_port_h); /* htons IS IMPORTANT!!! */
+	opts->server_port = htons(opts->server_port_h);
+	return;
+}
+
+void set_local_port(unsigned short port, struct options *opts) {
+	opts->local_port_h = port;
+	opts->local_port = htons(opts->local_port_h); /* htons IS IMPORTANT!!! */
 	return;
 }
 
@@ -62,7 +68,7 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 	int got_username = 0;
 	int got_password = 0;
 	
-	while ((option = getopt_long(argc,argv,"s:p:u:w:h",long_options,NULL)) > 0) {
+	while ((option = getopt_long(argc,argv,"s:o:u:p:h",long_options,NULL)) > 0) {
 		switch(option) {
 		case 's':
 			/* server ip */
@@ -76,7 +82,7 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 				fprintf(stderr,"invalid server port.\n");
 				exit(EXIT_FAILURE);
 			}
-			set_port(port,opts);
+			set_local_port(port,opts);
 			break;
 		case 'u':
 			/* username */
@@ -102,8 +108,12 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 	if (!got_ip)
 		set_ip(DEFAULT_SERVER_IP,opts); 
 
+	/* no option for this at the moment */
+	set_server_port(DEFAULT_SERVER_PORT,opts);
+
+	/* setting the local port to 0 will give us a random free port. */
 	if (!got_port)
-		set_port(DEFAULT_SERVER_PORT,opts); 
+		set_local_port(0,opts); 
 
 	if (!got_username)
 		set_username(DEFAULT_USERNAME,opts);
@@ -119,11 +129,11 @@ void print_options_help(void) {
 	       "A simple internat chat program.\n\n"
 	       "Options:\n"
 	       "  -s --server        IP of the chat server to connect to\n"
-	       "  -o --port          UDP port the server is running on (default 31180)\n"
+	       "  -o --port          Specify TCP port to listen for incoming connections on.\n"
 	       "  -p --password      Server password\n"
 	       "  -u --user          Username to register with the server (default 'guest')\n"
 	       "  -h --help          Print this help\n\n"
-	       "Example: mchat -s 149.171.92.193 -o 31180 -u alice -p mypassword\n"
+	       "Example: mchat -s 149.171.92.193 -o 31181 -u alice -p mypassword\n"
 	       "Once in the program, enter 'help' to get a list of commands.\n");
 	return;
 }

@@ -42,8 +42,7 @@ int start_listening(struct options *opts) {
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	/* this will bind to any free port */
-	server_addr.sin_port = 0;
+	server_addr.sin_port = opts->local_port;
 
 	if (bind(s,server_addr_p,len) < 0) {
 		perror("failed to bind listening socket");
@@ -228,7 +227,7 @@ void receive_message(int fd) {
 	} else {
 		/* Everything is good! Print out the recieved message and the
 		 * user that sent it. */
-		printf_threadsafe("\n%s says: %s\n",remote_user,buffer); 
+		printf_threadsafe("\n%s says: %s",remote_user,buffer); 
 	} 
 
 	return;

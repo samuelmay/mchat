@@ -17,7 +17,7 @@
 #include "skiplist.h"
 
 #define SERV_PORT    31180     /* server UDP port */
-#define SERV_PASSWD  "project" /* password */
+#define SERV_PASSWD  "3118miniproject" /* password */
 #define MAX_MSG_LEN  1200      /* max size of any msg */
 #define SERV_AGE_TIME 120      /* seconds after which user is timed out */
 

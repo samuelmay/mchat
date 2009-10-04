@@ -57,13 +57,13 @@ void *registration_thread(void *arg) {
 	}
 
 	/* zero and assign server address struct  */
-	struct sockaddr_in server_addr;
-	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
+	struct sockaddr_in reg_addr;
+	struct sockaddr *reg_addr_p = (struct sockaddr *)&reg_addr;
 	socklen_t addr_len;
-	bzero(&server_addr,sizeof(struct sockaddr_in));
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = server_opts->server_port;
-	server_addr.sin_addr = server_opts->ip;
+	bzero(&reg_addr,sizeof(struct sockaddr_in));
+	reg_addr.sin_family = AF_INET;
+	reg_addr.sin_port = server_opts->server_port;
+	reg_addr.sin_addr = server_opts->ip;
 
 
 	/* compose and send our registration message */
@@ -85,13 +85,13 @@ void *registration_thread(void *arg) {
 
 		/* printf("sending registration message to server..."); */
 		if (sendto(socket_fd, &message, message_len, 0,
-			   server_addr_p, addr_len) < message_len) {
+			   reg_addr_p, addr_len) < message_len) {
 			perror("failed to send message to registration server");
 		}
 
 		/* we don't know the recieved message length */
 		if (recvfrom(socket_fd, &response, response_len, 0,
-			     server_addr_p, &addr_len) < 0) {
+			     reg_addr_p, &addr_len) < 0) {
 			perror("failed to recieve response from registration server");
 		}
 		/* printf("recieved response!\n"); */

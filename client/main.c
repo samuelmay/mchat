@@ -76,10 +76,8 @@ int main (int argc, char **argv) {
 		fgets(input,INPUT_LEN,stdin);
 		if (strncmp(input,"\n",INPUT_LEN) == 0) {
 			continue;
-		} else if (strncmp(input,"msg ",4) == 0 &&
-			   sscanf(input,"msg %255s\n",arg1) == 1) {
-			/* remember to set the specifier length for the above
-			 * scanf to INPUT_LEN */
+		} else if (strncmp(input,"msg ",4) == 0) {
+			strncpy(arg1,&(input[4]),INPUT_LEN-4);
 			broadcast_message(arg1);
 		} else if (strncmp(input,"list\n",5) == 0) {
 			print_user_list();
@@ -87,7 +85,10 @@ int main (int argc, char **argv) {
 			pthread_cond_signal(&registration_update);
 		} else if (strncmp(input,"connect ",8) == 0 &&
 			   sscanf(input,"connect %13s\n",arg1) == 1) {
-			/* Initialize a TCP connection with a given user. */ 
+			/* Remember to set the specifier length for the above
+			 * scanf to USERNAME_LEN.
+			 * 
+			 * Initialize a TCP connection with a given user. */ 
 			connect_user(arg1);
 		} else if (strncmp(input,"disconnect ",11) == 0 &&
 			   sscanf(input,"disconnect %13s\n",arg1) == 1) {

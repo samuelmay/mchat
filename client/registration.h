@@ -9,15 +9,15 @@
 struct reg_msg {
 	char password[PASSWORD_LEN];
 	char username[USERNAME_LEN];
-	unsigned short tcp_port;
+	u_int16_t tcp_port;
 };
 
 struct reg_resp {
-	unsigned long nusers; /* number of users (no more than 50) */
+	u_int32_t nusers; /* number of users (no more than 50) */
 	struct user_info {
 		char username[USERNAME_LEN];
-		unsigned short tcp_port;
-		unsigned long ip_addr;
+		u_int16_t tcp_port;
+		u_int32_t ip_addr;
 	} user[MAX_USERS]; /* info about each user */
 };
 

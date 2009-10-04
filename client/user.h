@@ -6,8 +6,8 @@
 
 struct user {
 	char name[USERNAME_LEN];
-	unsigned short port;
-	unsigned long ip;
+	u_int16_t port;
+	u_int32_t ip;
 	int socket;
 	unsigned int flags; 	/* connected, blocked */
 };

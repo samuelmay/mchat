@@ -24,23 +24,23 @@
 typedef struct {
     char passwd[16];
     char username[14];
-    unsigned short tcpPort;
+    u_int16_t tcpPort;
 } RegMsg_t;
 
 typedef struct {
-    unsigned long nusers; /* number of users (no more than 50) */
+    u_int32_t nusers; /* number of users (no more than 50) */
     struct UserInfo_s {
         char username[14];
-        unsigned short tcpPort;
-        unsigned long ipAddr;
+        u_int16_t tcpPort;
+        u_int32_t ipAddr;
     } user[50]; /* info about each user */
 } RegRespMsg_t;
 
 typedef struct User_s {
     char username[16];
-    unsigned short tcpPort;
-    unsigned long ipAddr;
-    unsigned long timestamp;
+    u_int16_t tcpPort;
+    u_int32_t ipAddr;
+    u_int32_t timestamp;
 } User_t;
 
 typedef struct {

@@ -59,6 +59,7 @@ void *registration_thread(void *arg) {
 	/* zero and assign server address struct  */
 	struct sockaddr_in server_addr;
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
+	socklen_t addr_len;
 	bzero(&server_addr,sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = server_opts->server_port;
@@ -67,8 +68,9 @@ void *registration_thread(void *arg) {
 
 	/* compose and send our registration message */
 	struct reg_msg message;
+	size_t message_len = sizeof(struct reg_msg);
 	struct reg_resp response;
-	socklen_t response_len;  
+	size_t response_len = sizeof(struct reg_resp);  
 
 	bzero(&message,sizeof(struct reg_msg));
 	strncpy((char *)&message.password,server_opts->password,15);
@@ -77,14 +79,18 @@ void *registration_thread(void *arg) {
 
 	/* poll server continously, every 30s */
 	while (1) {
+  		/* what do you know huh, porting programs does reveal bugs */
+		addr_len=sizeof(struct sockaddr_in);
+
 		/* printf("sending registration message to server..."); */
-		if (sendto(socket_fd, &message, sizeof(struct reg_msg), 0,
-			   server_addr_p,sizeof(struct sockaddr_in)) < 0) {
+		if (sendto(socket_fd, &message, message_len, 0,
+			   server_addr_p, addr_len) < message_len) {
 			perror("failed to send message to registration server");
 		}
 
-		if (recvfrom(socket_fd, &response, sizeof(struct reg_resp), 0,
-			     server_addr_p, &response_len) < 0) {
+		/* we don't know the recieved message length */
+		if (recvfrom(socket_fd, &response, response_len, 0,
+			     server_addr_p, &addr_len) < 0) {
 			perror("failed to recieve response from registration server");
 		}
 		/* printf("recieved response!\n"); */
@@ -94,10 +100,11 @@ void *registration_thread(void *arg) {
 		/* copy response info into temporary user list. Use the flags
 		 * from the existing user list if they are there.
 		 *
-		 * IMPORTANT: Assume the server returns user information in
-		 * alphabetical/sorted order. I know the current server
-		 * implementation does this. CHECK THIS ASSUMPTION otherwise the
-		 * binary search used in lookup_user() will not work.
+		 * IMPORTANT: Assume the server returns user
+		 * information in alphabetical/sorted order. I know
+		 * the current server implementation does this. CHECK
+		 * THIS ASSUMPTION otherwise the binary search used in
+		 * lookup_user() will not work.
 		 */
 		for (i = 0; i < ntohl(response.nusers); i++) {
 			strncpy(tmp_user_list[i].name,

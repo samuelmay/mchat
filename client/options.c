@@ -114,7 +114,7 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 }
 
 void print_options_help(void) {
-	printf("chat v0.1, copyright sam may 2009.\n"
+	printf("mchat v0.1, copyright sam may 2009.\n"
 	       "A simple internat chat program.\n\n"
 	       "Options:\n"
 	       "  -s --server        IP of the chat server to connect to\n"
@@ -122,7 +122,7 @@ void print_options_help(void) {
 	       "  -p --password      Server password\n"
 	       "  -u --user          Username to register with the server (default 'guest')\n"
 	       "  -h --help          Print this help\n\n"
-	       "Example: chat -s 149.171.92.193 -o 31180 -u alice -p mypassword\n"
+	       "Example: mchat -s 149.171.92.193 -o 31180 -u alice -p mypassword\n"
 	       "Once in the program, enter 'help' to get a list of commands.\n");
 	return;
 }

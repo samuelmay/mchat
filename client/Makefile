@@ -4,7 +4,7 @@ CFLAGS = -Wall -Werror $(DEBUG)
 SRC = main.c options.c registration.c client.c server.c user.c commands.c
 HEADERS = options.h registration.h connection.h user.h console.h commands.h
 OBJ = $(SRC:.c=.o)
-BIN = chat
+BIN = mchat
 
 .PHONY: clean clobber 
 

@@ -16,7 +16,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <error.h>
 #include <getopt.h>
 
 #include "options.h"
@@ -32,7 +31,8 @@ static struct option long_options[] = {
 void set_ip(char *str,struct options *opts) {
 	strncpy(opts->ip_string,str,INET_ADDRSTRLEN);
 	if (inet_aton(opts->ip_string,&(opts->ip)) == 0) {
-		error(EXIT_FAILURE,0,"invalid server IP address.");
+		fprintf(stderr,"invalid server IP address.\n"); 
+		exit(EXIT_FAILURE);
 	}
 	return;
 }	
@@ -73,7 +73,8 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 			/* server port */
 			got_port = 1;
 			if (sscanf(optarg,"%hu",&port) < 0) {
-				error(EXIT_FAILURE,0,"invalid server port.");
+				fprintf(stderr,"invalid server port.\n");
+				exit(EXIT_FAILURE);
 			}
 			set_port(port,opts);
 			break;

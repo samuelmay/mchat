@@ -18,7 +18,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <errno.h>
-#include <error.h>
 #include <pthread.h>
 
 #include "user.h"
@@ -51,14 +50,14 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 		/* SO MUCH GORRAM ERROR HANDLING, INVENT EXCEPTIONS ALREADY */
 		if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0 ||
 		    connect(s,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
-			error(0,errno,"could not connect to server");
+			perror("could not connect to server");
 		} else if (send(s,opts.username,USERNAME_LEN,0)
 			   < USERNAME_LEN) {
-			error(0,errno,
-			      "failed to send username to open new connection");
+			perror("failed to send username to open new "
+			       "connection");
 		} else if (recv(s,ack,MESSAGE_LEN,0)
 			   < MESSAGE_LEN) {
-			error(0,errno,"failed to recieve ack");
+			perror("failed to recieve ack");
 		} else if (strncmp(ack,"UNKNOWN",MESSAGE_LEN) == 0) {
 			printf_threadsafe("%s says they don't know you.\n\n",
 					  remote_user);
@@ -72,7 +71,7 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 			user_list[i].socket = s;
 			cancel = 0;
 		} else {
-			error(0,0,"unknown ack recieved.");
+			fprintf(stderr,"unknown ack recieved.\n");
 		}
 	}
 	pthread_mutex_unlock(&user_list_lock);
@@ -101,7 +100,7 @@ void broadcast_message(char message[INPUT_LEN]) {
 				 message,
 				 INPUT_LEN,
 				 0) < INPUT_LEN) {
-				error(0,errno,"failed to send message.");
+				perror("failed to send message.");
 			}
 		}
 	}			    

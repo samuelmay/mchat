@@ -17,7 +17,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <error.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -53,7 +52,8 @@ void *registration_thread(void *arg) {
 
 	/* create socket */
 	if ((socket_fd = socket(AF_INET,SOCK_DGRAM,0)) < 0) {
-		error(EXIT_FAILURE,errno,"socket creation failed");
+		perror("registration");
+		exit(EXIT_FAILURE);
 	}
 
 	/* zero and assign server address struct  */
@@ -80,12 +80,12 @@ void *registration_thread(void *arg) {
 		/* printf("sending registration message to server..."); */
 		if (sendto(socket_fd, &message, sizeof(struct reg_msg), 0,
 			   server_addr_p,sizeof(struct sockaddr_in)) < 0) {
-			error(EXIT_FAILURE,errno,"failed to send registration message to server");
+			perror("failed to send message to registration server");
 		}
 
 		if (recvfrom(socket_fd, &response, sizeof(struct reg_resp), 0,
 			     server_addr_p, &response_len) < 0) {
-			error(EXIT_FAILURE,errno,"failed to recieve response from server");
+			perror("failed to recieve response from registration server");
 		}
 		/* printf("recieved response!\n"); */
 

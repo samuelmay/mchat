@@ -18,7 +18,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <errno.h>
-#include <error.h>
 #include <pthread.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -32,7 +31,8 @@ int start_listening(struct options *opts) {
 	/* create socket and start listening for incoming connections */
 	int s;
 	if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0) {
-		error(EXIT_FAILURE,errno,"listening socket creation failed");
+		perror("listening socket creation failed");
+		exit(EXIT_FAILURE);
 	}
 
 	struct sockaddr_in server_addr;
@@ -46,19 +46,22 @@ int start_listening(struct options *opts) {
 	server_addr.sin_port = 0;
 
 	if (bind(s,server_addr_p,len) < 0) {
-		error(EXIT_FAILURE,errno,"failed to bind listening socket");
+		perror("failed to bind listening socket");
+		exit(EXIT_FAILURE);
 	}
 
 	/* since we binded to any free port, get the actual port we binded to,
 	 * and set the options we will send to the registration server */
 	if (getsockname(s,server_addr_p,&len) < 0) {
-		error(EXIT_FAILURE,errno,"could not get port from bind");
+		perror("could not get port from bind");
+		exit(EXIT_FAILURE);
 	}
 	opts->local_port = server_addr.sin_port;
 	opts->local_port_h = ntohs(server_addr.sin_port);
 	
 	if (listen(s,10) < 0) {
-		error(EXIT_FAILURE,errno,"failed to listen on listening socket");
+		perror("failed to listen on listening socket");
+		exit(EXIT_FAILURE);
 	}
 	
 	return s;
@@ -109,7 +112,7 @@ void *server_thread(void *arg) {
 
 		/* poll! */
 		if (select(max_fd+1,&fds,NULL,NULL,&timeout) == -1) {
-			error(0,errno,"select failed!");
+			perror("select failed");
 		}
 
 		/* look to see which socket was activated */
@@ -142,14 +145,14 @@ void accept_new_connection(int fd) {
 
 	bzero(client_addr_p,sizeof(struct sockaddr_in));
 	if ((s = accept(fd,client_addr_p,&client_addr_len)) < 0) {
-		error(0,errno,"failed to accept connection");
+		perror("failed to accept connection");
 		close(s);
 		return;
 	}
 
 	/* they should send us their username */
 	if (recv(s,remote_user,USERNAME_LEN,0) < USERNAME_LEN) {
-		error(0,errno,"failed to receive username from new connection.");
+		perror("failed to receive username from new connection.");
 		close(s);
 		return;
 	}
@@ -174,7 +177,7 @@ void accept_new_connection(int fd) {
 	/* bit nervous about blocking on IO whilst holding the main lock. should
 	 * be ok? .... */
 	if (send(s,ack,MESSAGE_LEN,0) < MESSAGE_LEN) {
-		error(0,0,"failed to send connection ack");
+		fprintf(stderr,"failed to send connection ack\n");
 		cancel = 1;
 	}
 
@@ -200,11 +203,11 @@ void receive_message(int fd) {
 	if ((retval = recv(fd,remote_user,USERNAME_LEN,0)) < USERNAME_LEN && 
 	    retval != 0) {
 		/* short read on username (message header) */
-		error(0,errno,"failed to recieve username for incoming message");
+		perror("failed to recieve username for incoming message");
 	} else if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN &&
 		   retval != 0) {
 		/* short read on message */
-		error(0,errno,"failed to receive message.");
+		perror("failed to receive message.");
 	} else if (retval == 0) {
                 /* closed connection at remote end. close socket and remove from
                  * user list. */

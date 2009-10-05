@@ -17,7 +17,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <errno.h>
 #include <pthread.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -57,12 +56,12 @@ int start_listening(struct options *opts) {
 	}
 	opts->local_port = server_addr.sin_port;
 	opts->local_port_h = ntohs(server_addr.sin_port);
-	
+
 	if (listen(s,10) < 0) {
 		perror("failed to listen on listening socket");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	return s;
 }
 
@@ -84,7 +83,7 @@ void *server_thread(void *arg) {
 		pthread_mutex_lock(&user_list_lock); 		/* NUMBER 1 */
 		for (i = 0; i < num_users; i++) {
 			if (user_list[i].flags & USER_CONNECTED) {
-				FD_SET(user_list[i].socket,&fds); 
+				FD_SET(user_list[i].socket,&fds);
 				if (user_list[i].socket > max_fd) {
 					max_fd = user_list[i].socket;
 				}
@@ -97,7 +96,7 @@ void *server_thread(void *arg) {
 				close(user_list[i].socket);
 				user_list[i].socket = 0;
 			}
-			
+
 		}
 		pthread_mutex_unlock(&user_list_lock);
 		/* END UNSAFE CONCURRENT STUFF */
@@ -184,10 +183,10 @@ void accept_new_connection(int fd) {
 		close(s);
 	} else {
 		user_list[i].flags |= USER_CONNECTED; /* set the bit */
-		user_list[i].socket = s; 
+		user_list[i].socket = s;
 		printf_threadsafe("\naccepted incoming connection from %s.\n",
 			remote_user);
-	} 
+	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
 	return;
@@ -199,7 +198,7 @@ void receive_message(int fd) {
 	int i;
 	int retval;
 
-	if ((retval = recv(fd,remote_user,USERNAME_LEN,0)) < USERNAME_LEN && 
+	if ((retval = recv(fd,remote_user,USERNAME_LEN,0)) < USERNAME_LEN &&
 	    retval != 0) {
 		/* short read on username (message header) */
 		perror("failed to recieve username for incoming message");
@@ -219,16 +218,16 @@ void receive_message(int fd) {
 			user_list[i].flags &= ~USER_CONNECTED;/*clear the bit*/
 			user_list[i].socket = 0;
 		}
-		printf_threadsafe("\n%s closed their connection.\n", 
-				  user_list[i].name); 
+		printf_threadsafe("\n%s closed their connection.\n",
+				  user_list[i].name);
 		close(fd);
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */
 	} else {
 		/* Everything is good! Print out the recieved message and the
 		 * user that sent it. */
-		printf_threadsafe("\n%s says: %s",remote_user,buffer); 
-	} 
+		printf_threadsafe("\n%s says: %s",remote_user,buffer);
+	}
 
 	return;
 }

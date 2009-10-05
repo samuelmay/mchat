@@ -16,7 +16,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -43,16 +42,16 @@ int main (int argc, char **argv) {
 	printf("Welcome to Sam's chat client, %s.\n", opts.username);
 
 	/* open local port to listen for incoming connections */
-	int server_socket = start_listening(&opts); 
+	int server_socket = start_listening(&opts);
         /* start_listenin() modifies opts to contain the port we were given by
 	 * bind() */
-	printf("Listening on port %hu.\n",opts.local_port_h); 
+	printf("Listening on port %hu.\n",opts.local_port_h);
 
 	/**** locks are needed once we create threads ****/
 
 	/* create a background thread to stay in touch with the server */
-	printf("Connecting to %s on port %hu.\n", 
-	       opts.ip_string, 
+	printf("Connecting to %s on port %hu.\n",
+	       opts.ip_string,
 	       opts.server_port_h);
 	pthread_t registration;
 	pthread_create(&registration,
@@ -68,7 +67,7 @@ int main (int argc, char **argv) {
 		       &server_socket);
 
 	/* loop on the input prompt, waiting for commands */
-	char input[INPUT_LEN]; 
+	char input[INPUT_LEN];
 	char arg1[INPUT_LEN];
 	char arg2[INPUT_LEN];
 	int tmp;
@@ -97,8 +96,8 @@ int main (int argc, char **argv) {
 			   sscanf(input,"connect %13s\n",arg1) == 1) {
 			/* Remember to set the specifier length for the above
 			 * scanf to USERNAME_LEN.
-			 * 
-			 * Initialize a TCP connection with a given user. */ 
+			 *
+			 * Initialize a TCP connection with a given user. */
 			connect_user(arg1);
 		} else if (strncmp(input,"disconnect ",11) == 0 &&
 			   sscanf(input,"disconnect %13s\n",arg1) == 1) {
@@ -112,7 +111,7 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"help",4) == 0) {
 			help();
 		} else if (strncmp(input,"quit\n",5) == 0 ||
-			   strncmp(input,"bye\n",4) == 0 || 
+			   strncmp(input,"bye\n",4) == 0 ||
 			   strlen(input) == 0) {
 			/* if the length of the input is 0, someone hit
 			 * Ctrl-D */
@@ -121,7 +120,7 @@ int main (int argc, char **argv) {
 			/* the 'ed' school of error reporting. */
 			printf_threadsafe("Unknown or invalid command.\n");
 		}
-	} 
+	}
 
 	/* stop all threads */
 	pthread_cancel(server);
@@ -136,5 +135,5 @@ int main (int argc, char **argv) {
 
 	printf("Bye.\n");
 	return 0;
-}	
+}
 

@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <pthread.h>
 
 #include "user.h"
@@ -51,7 +50,7 @@ void unblock(char user[USERNAME_LEN]) {
 	} else {
 		user_list[i].flags &= ~USER_BLOCKED;
 		printf_threadsafe("%s was unblocked.\n\n",user);
-	} 
+	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
 	return;
@@ -69,7 +68,7 @@ void disconnect(char user[USERNAME_LEN]) {
 	} else {
 		user_list[i].flags &= ~USER_CONNECTED;
 		printf_threadsafe("%s was disconnected.\n\n",user);
-	} 	
+	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
 	return;

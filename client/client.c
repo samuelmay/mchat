@@ -17,7 +17,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <errno.h>
 #include <pthread.h>
 
 #include "user.h"
@@ -36,7 +35,7 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 
 	bzero(server_addr_p,sizeof(struct sockaddr_in));
 
-        /* UNSAFE CONCURRENT STUFF BEGINS */	
+        /* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
 	i = lookup_user(remote_user);
 	if (i < 0) {
@@ -86,7 +85,7 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 
 void broadcast_message(char message[INPUT_LEN]) {
 	int i;
-        /* UNSAFE CONCURRENT STUFF BEGINS */	
+        /* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
 	for (i = 0; i < num_users; i++) {
 		if (user_list[i].flags & USER_CONNECTED) {
@@ -102,7 +101,7 @@ void broadcast_message(char message[INPUT_LEN]) {
 				perror("failed to send message");
 			}
 		}
-	}			    
+	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
 	return;

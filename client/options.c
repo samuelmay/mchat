@@ -15,7 +15,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <errno.h>
 #include <getopt.h>
 
 #include "options.h"
@@ -31,11 +30,11 @@ static struct option long_options[] = {
 void set_ip(char *str,struct options *opts) {
 	strncpy(opts->ip_string,str,INET_ADDRSTRLEN);
 	if (inet_aton(opts->ip_string,&(opts->ip)) == 0) {
-		fprintf(stderr,"invalid server IP address.\n"); 
+		fprintf(stderr,"invalid server IP address.\n");
 		exit(EXIT_FAILURE);
 	}
 	return;
-}	
+}
 
 void set_server_port(unsigned short port, struct options *opts) {
 	opts->server_port_h = port;
@@ -67,7 +66,7 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 	int got_port     = 0;
 	int got_username = 0;
 	int got_password = 0;
-	
+
 	while ((option = getopt_long(argc,argv,"s:o:u:p:h",long_options,NULL)) > 0) {
 		switch(option) {
 		case 's':
@@ -103,17 +102,17 @@ void parse_cmdline(int argc, char **argv, struct options *opts) {
 			break;
 		}
 	}
-	
+
 	/* set default if an option wasn't specified */
 	if (!got_ip)
-		set_ip(DEFAULT_SERVER_IP,opts); 
+		set_ip(DEFAULT_SERVER_IP,opts);
 
 	/* no option for this at the moment */
 	set_server_port(DEFAULT_SERVER_PORT,opts);
 
 	/* setting the local port to 0 will give us a random free port. */
 	if (!got_port)
-		set_local_port(0,opts); 
+		set_local_port(0,opts);
 
 	if (!got_username)
 		set_username(DEFAULT_USERNAME,opts);

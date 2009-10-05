@@ -16,7 +16,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -33,7 +32,7 @@ pthread_mutex_t registration_update_lock; /* for some reason a mutex must always
 				     * USE */
 
 void *registration_thread(void *arg) {
-	struct options *server_opts = arg; 
+	struct options *server_opts = arg;
 	int socket_fd;
 	u_int32_t i;
 	int j;
@@ -70,7 +69,7 @@ void *registration_thread(void *arg) {
 	struct reg_msg message;
 	size_t message_len = sizeof(struct reg_msg);
 	struct reg_resp response;
-	size_t response_len = sizeof(struct reg_resp);  
+	size_t response_len = sizeof(struct reg_resp);
 
 	bzero(&message,sizeof(struct reg_msg));
 	strncpy((char *)&message.password,server_opts->password,15);
@@ -136,8 +135,8 @@ void *registration_thread(void *arg) {
 		/* set wait time, and sleep */
 		retval = gettimeofday(&time,NULL);
 		timeout.tv_sec = time.tv_sec + SERVER_TIMEOUT/2;
-//		timeout.tv_sec = time.tv_sec + 10; 
-		timeout.tv_nsec = time.tv_usec*100; 
+//		timeout.tv_sec = time.tv_sec + 10;
+		timeout.tv_nsec = time.tv_usec*100;
 		retval = pthread_cond_timedwait(&registration_update,
 						&registration_update_lock,
 						&timeout);

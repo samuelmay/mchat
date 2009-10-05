@@ -17,7 +17,7 @@ struct options {
 	unsigned short server_port;
 	unsigned short local_port;
 	struct in_addr ip;
-	/* for human readableness */ 
+	/* for human readableness */
 	unsigned short server_port_h;
 	unsigned short local_port_h;
 	char ip_string[INET_ADDRSTRLEN];

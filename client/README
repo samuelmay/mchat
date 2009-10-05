@@ -7,7 +7,9 @@ Threads
 
 * Registration thread: simply throws a UDP packet at the registration server
   every 30 seconds, updates the user list with the response (carefully!), and
-  goes back to sleep.
+  goes back to sleep (actually, waits on a condition variable with a 30s
+  timeout, so we can force an update right now by activating the condition
+  variable).
   FILES: registration.c
 
 * Incoming connection server: uses select() to wait for a readable socket, and
@@ -51,6 +53,12 @@ Commands
   FILES: user.c
   FUNCTIONS: print_user_list()
   PROCEDURE: Loop through user list and print to console.
+
+* update: force update of user list
+  FILES: main.c
+  FUNCTIONS:
+  PROCEDURE: set condition variable for registration thread so it wakes and
+  updates now.
 
 * connect <username>: initiate connection with someone on the user list
   FILES: client.c

@@ -76,6 +76,30 @@ void disconnect(char user[USERNAME_LEN]) {
 }
 
 void help(void) {
-	printf_threadsafe("TODO (sorry)\n\n");
+	printf_threadsafe(
+"AVAILABLE COMMANDS\n"
+"help                 print this help\n"
+"\n"
+"list                 list logged-in users\n"
+"\n"
+"update               force update of logged-in users list from server\n"
+"\n"
+"connect <user>       connect to a logged-in user, so you can send and recieve\n"
+"                     messages with them. Unless they are blocked, incoming\n"
+"                     connection attempts from other users on the user list are\n"
+"                     always accepted.\n"
+"\n"
+"disconnect <user>    disconnect from a user\n"
+"\n"
+"block <user>         prevent a user from connecting to you\n"
+"\n"
+"unblock <user>       re-allow a blocked user to connect to you\n"
+"\n"
+"msg <text>           broadcast a message to all users you are connected to\n"
+"\n"
+"msg/<user> <text>    send a message to only one user\n"
+"\n"
+"quit                 exit mchat\n"
+		);
 	return;
 }

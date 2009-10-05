@@ -17,5 +17,6 @@ void receive_message(int fd);
 /* client.c */
 void connect_user(char remote_user[USERNAME_LEN]);
 void broadcast_message(char message[INPUT_LEN]);
+void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]);
 
 #endif /* _CONNECTION_H_ */

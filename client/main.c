@@ -68,8 +68,10 @@ int main (int argc, char **argv) {
 		       &server_socket);
 
 	/* loop on the input prompt, waiting for commands */
-	char input[INPUT_LEN];
+	char input[INPUT_LEN]; 
 	char arg1[INPUT_LEN];
+	char arg2[INPUT_LEN];
+	int tmp;
 	while (1) {
 		bzero(input,INPUT_LEN*sizeof(char));
 		printf_threadsafe("> ");
@@ -79,6 +81,14 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"msg ",4) == 0) {
 			strncpy(arg1,&(input[4]),INPUT_LEN-4);
 			broadcast_message(arg1);
+		} else if (strncmp(input,"msg/",4) == 0 &&
+			   sscanf(input,"msg/%13s %n",arg1,&tmp) >= 1) {
+			/* the '%n' directive in scanf returns the number of
+			 * characters that have been processed so far. It's
+			 * undefined how it affects the return value, so check
+			 * for >= 1. */
+			strncpy(arg2,&(input[tmp]),INPUT_LEN-tmp);
+			send_message(arg1,arg2);
 		} else if (strncmp(input,"list\n",5) == 0) {
 			print_user_list();
 		} else if (strncmp(input,"update\n",7) == 0) {

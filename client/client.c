@@ -84,7 +84,6 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 	return;
 }
 
-
 void broadcast_message(char message[INPUT_LEN]) {
 	int i;
         /* UNSAFE CONCURRENT STUFF BEGINS */	
@@ -100,11 +99,33 @@ void broadcast_message(char message[INPUT_LEN]) {
 				 message,
 				 INPUT_LEN,
 				 0) < INPUT_LEN) {
-				perror("failed to send message.");
+				perror("failed to send message");
 			}
 		}
 	}			    
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
+	return;
+}
+
+void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]) {
+	int i;
+	pthread_mutex_lock(&user_list_lock);
+	i = lookup_user(remote_user);
+	if (i < 0) {
+		printf_threadsafe("that user's not logged in!\n\n");
+	} else if (!(user_list[i].flags & USER_CONNECTED)) {
+		printf_threadsafe("you're not connected to that user!\n\n");
+	} else if (send(user_list[i].socket,
+			opts.username,
+			USERNAME_LEN,
+			0) < USERNAME_LEN ||
+		   send(user_list[i].socket,
+			message,
+			INPUT_LEN,
+			0) < INPUT_LEN) {
+		perror("failed to send message");
+	}
+	pthread_mutex_unlock(&user_list_lock);
 	return;
 }

@@ -58,13 +58,17 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 			   < MESSAGE_LEN) {
 			perror("failed to recieve ack");
 		} else if (strncmp(ack,"UNKNOWN",MESSAGE_LEN) == 0) {
-			printf_threadsafe("%s says they don't know you.\n",
+			printf_threadsafe(USERNAME_PRINT_FMT
+					  " says they don't know you.\n",
 					  remote_user);
 		} else if (strncmp(ack,"BLOCKED",MESSAGE_LEN) == 0) {
-			printf_threadsafe("%s has blocked you!\n",
+			printf_threadsafe(USERNAME_PRINT_FMT
+					  " has blocked you!\n",
 					  remote_user);
 		} else if (strncmp(ack,"HI",MESSAGE_LEN) == 0) {
-			printf_threadsafe("connecting to user %s\n",remote_user);
+			printf_threadsafe("connecting to user "
+					  USERNAME_PRINT_FMT "\n",
+					  remote_user);
 			/* enter our new connection! */
 			user_list[i].flags |= USER_CONNECTED;
 			user_list[i].socket = s;

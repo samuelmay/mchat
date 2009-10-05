@@ -31,7 +31,8 @@ void block(char user[USERNAME_LEN]) {
 		 * them as well */
 		user_list[i].flags &= ~USER_CONNECTED;
 		user_list[i].flags |= USER_BLOCKED;
-		printf_threadsafe("%s was blocked.\n",user);
+		printf_threadsafe(USERNAME_PRINT_FMT " was blocked.\n",
+				  user);
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
@@ -49,7 +50,8 @@ void unblock(char user[USERNAME_LEN]) {
 		printf_threadsafe("that user's not blocked!\n");
 	} else {
 		user_list[i].flags &= ~USER_BLOCKED;
-		printf_threadsafe("%s was unblocked.\n",user);
+		printf_threadsafe(USERNAME_PRINT_FMT " was unblocked.\n",
+				  user);
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */
@@ -67,7 +69,8 @@ void disconnect(char user[USERNAME_LEN]) {
 		printf_threadsafe("you're not connected to that user!\n");
 	} else {
 		user_list[i].flags &= ~USER_CONNECTED;
-		printf_threadsafe("%s was disconnected.\n",user);
+		printf_threadsafe(USERNAME_PRINT_FMT " was disconnected.\n",
+				  user);
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* END UNSAFE CONCURRENT STUFF */

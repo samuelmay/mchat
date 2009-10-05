@@ -2,6 +2,9 @@
 #define _USER_H_
 
 #define USERNAME_LEN 14
+#define USERNAME_SCAN_FMT "%13s"
+#define USERNAME_PRINT_FMT "%.13s"
+
 #define MAX_USERS 50
 
 struct user {

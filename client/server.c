@@ -184,8 +184,9 @@ void accept_new_connection(int fd) {
 	} else {
 		user_list[i].flags |= USER_CONNECTED; /* set the bit */
 		user_list[i].socket = s;
-		printf_threadsafe("\naccepted incoming connection from %s.\n",
-			remote_user);
+		printf_threadsafe("\naccepted incoming connection from "
+				  USERNAME_PRINT_FMT ".",
+				  remote_user);
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
@@ -218,15 +219,29 @@ void receive_message(int fd) {
 			user_list[i].flags &= ~USER_CONNECTED;/*clear the bit*/
 			user_list[i].socket = 0;
 		}
-		printf_threadsafe("\n%s closed their connection.\n",
+
+		printf_threadsafe("\n" USERNAME_PRINT_FMT
+				  " closed their connection.",
 				  user_list[i].name);
+
 		close(fd);
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */
 	} else {
 		/* Everything is good! Print out the recieved message and the
 		 * user that sent it. */
-		printf_threadsafe("\n%s says: %s",remote_user,buffer);
+
+		/* 'chomp' string. If the last character is a newline, remove
+		 * it. */
+		i = strnlen(buffer,INPUT_LEN);
+		if (buffer[i-1] == '\n') {
+			buffer[i-1] = '\0';
+		}
+
+		printf_threadsafe("\n" USERNAME_PRINT_FMT " says: "
+				  INPUT_PRINT_FMT,
+				  remote_user,
+				  buffer);
 	}
 
 	return;

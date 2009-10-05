@@ -39,7 +39,8 @@ int main (int argc, char **argv) {
 	bzero(&opts,sizeof(struct options));
 	parse_cmdline(argc,argv,&opts);
 
-	printf("Welcome to Sam's chat client, %s.\n", opts.username);
+	printf("Welcome to Sam's chat client, " USERNAME_PRINT_FMT ".\n",
+	       opts.username);
 
 	/* open local port to listen for incoming connections */
 	int server_socket = start_listening(&opts);
@@ -81,7 +82,8 @@ int main (int argc, char **argv) {
 			strncpy(arg1,&(input[4]),INPUT_LEN-4);
 			broadcast_message(arg1);
 		} else if (strncmp(input,"msg/",4) == 0 &&
-			   sscanf(input,"msg/%13s %n",arg1,&tmp) >= 1) {
+			   sscanf(input, "msg/" USERNAME_SCAN_FMT " %n",
+				  arg1,&tmp) >= 1) {
 			/* the '%n' directive in scanf returns the number of
 			 * characters that have been processed so far. It's
 			 * undefined how it affects the return value, so check
@@ -93,20 +95,24 @@ int main (int argc, char **argv) {
 		} else if (strncmp(input,"update\n",7) == 0) {
 			pthread_cond_signal(&registration_update);
 		} else if (strncmp(input,"connect ",8) == 0 &&
-			   sscanf(input,"connect %13s\n",arg1) == 1) {
+			   sscanf(input,"connect " USERNAME_SCAN_FMT "\n",
+				  arg1) == 1) {
 			/* Remember to set the specifier length for the above
 			 * scanf to USERNAME_LEN.
 			 *
 			 * Initialize a TCP connection with a given user. */
 			connect_user(arg1);
 		} else if (strncmp(input,"disconnect ",11) == 0 &&
-			   sscanf(input,"disconnect %13s\n",arg1) == 1) {
+			   sscanf(input,"disconnect " USERNAME_SCAN_FMT "\n",
+				  arg1) == 1) {
 			disconnect(arg1);
 		} else if (strncmp(input,"block ",6) == 0 &&
-			   sscanf(input,"block %13s\n",arg1) == 1) {
+			   sscanf(input,"block " USERNAME_SCAN_FMT "\n",
+				  arg1) == 1) {
 			block(arg1);
 		} else if (strncmp(input,"unblock ",8) == 0 &&
-			   sscanf(input,"unblock %13s\n",arg1) == 1) {
+			   sscanf(input,"unblock " USERNAME_SCAN_FMT "\n",
+				  arg1) == 1) {
 			unblock(arg1);
 		} else if (strncmp(input,"help",4) == 0) {
 			help();

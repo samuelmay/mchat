@@ -34,7 +34,7 @@ int start_listening(struct options *opts) {
 	struct sockaddr_in server_addr;
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
 	socklen_t len = sizeof(struct sockaddr_in);
-	bzero(server_addr_p,len);
+	memset(server_addr_p,0,len);
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -75,7 +75,7 @@ void accept_new_connection(int fd) {
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
 
-	bzero(client_addr_p,sizeof(struct sockaddr_in));
+	memset(client_addr_p,0,client_addr_len);
 	if ((s = accept(fd,client_addr_p,&client_addr_len)) < 0) {
 		perror("failed to accept connection");
 		close(s);
@@ -192,7 +192,7 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 	int cancel = 1;		/* we set this to zero if we have a successful
 				 * outcome. */
 
-	bzero(server_addr_p,sizeof(struct sockaddr_in));
+	memset(server_addr_p,0,sizeof(struct sockaddr_in));
 
         /* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);

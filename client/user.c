@@ -12,11 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <errno.h>
 #include <pthread.h>
 
 #include "user.h"
@@ -32,7 +29,7 @@ void print_user_list(void) {
 	char *username;
 	unsigned short port;
 
-        /* UNSAFE CONCURRENT STUFF BEGINS */	
+        /* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock); /* NUMBER 1 */
 	printf("%14s %15s %6s\n","USERNAME","IP ADDRESS","PORT");
 	for (i = 0; i < num_users && i < 50; i++) {
@@ -50,7 +47,7 @@ void print_user_list(void) {
 	}
 	pthread_mutex_unlock(&user_list_lock); /* NUMBER 1 */
 	/* UNSAFE CONCURRENT STUFF ENDS */
-	
+
 	return;
 }
 
@@ -72,7 +69,7 @@ static int lookup_user_recursive(char name[USERNAME_LEN],int start,int end) {
 	}
 	return result;
 }
-	
+
 
 /* looks up user list entry for the given username details. Returns the index in
  * the user list, or -1 if not found. MUST HOLD USER LIST LOCK. */

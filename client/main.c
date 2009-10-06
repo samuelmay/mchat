@@ -4,8 +4,7 @@
  * Sam May 3206842
  * 22/09/09
  *
- * Client/server for a simple UDP internet chat protocol. A TELE3118
- * mini-project.
+ * Client/server for a simple internet chat protocol. A TELE3118 mini-project.
  *
  */
 
@@ -14,6 +13,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -32,11 +32,11 @@ struct options opts;
 int main (int argc, char **argv) {
 
 	/* initialize global user list */
-	bzero(&user_list,MAX_USERS*sizeof(struct user));
+	memset(&user_list,0,MAX_USERS*sizeof(struct user));
 	num_users = 0;
 
 	/* get registration server connection details from command-line */
-	bzero(&opts,sizeof(struct options));
+	memset(&opts,0,sizeof(struct options));
 	parse_cmdline(argc,argv,&opts);
 
 	printf("Welcome to Sam's chat client, " USERNAME_PRINT_FMT ".\n",
@@ -60,7 +60,8 @@ int main (int argc, char **argv) {
 		       registration_thread,
 		       &opts);
 
-	/* main loop */
+	/**** main loop ****/
+
 	char input[INPUT_LEN];
 	int i;
 	int quit = 0;
@@ -99,9 +100,9 @@ int main (int argc, char **argv) {
 		for (i = 0; i <= max_fd; i++) {
 			if (FD_ISSET(i,&fds)) {
 				if (i == STDIN_FILENO) {
+					memset(input,0,INPUT_LEN*sizeof(char));
 					fgets(input,INPUT_LEN,stdin);
 					quit = execute_command(input);
-					bzero(input,INPUT_LEN*sizeof(char));
 				} else if (i == server_socket) {
 					accept_new_connection(i);
 				} else {

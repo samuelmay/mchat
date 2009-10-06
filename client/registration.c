@@ -59,11 +59,10 @@ void *registration_thread(void *arg) {
 	struct sockaddr_in reg_addr;
 	struct sockaddr *reg_addr_p = (struct sockaddr *)&reg_addr;
 	socklen_t addr_len;
-	bzero(&reg_addr,sizeof(struct sockaddr_in));
+	memset(&reg_addr,0,sizeof(struct sockaddr_in));
 	reg_addr.sin_family = AF_INET;
 	reg_addr.sin_port = server_opts->server_port;
 	reg_addr.sin_addr = server_opts->ip;
-
 
 	/* compose and send our registration message */
 	struct reg_msg message;
@@ -71,7 +70,7 @@ void *registration_thread(void *arg) {
 	struct reg_resp response;
 	size_t response_len = sizeof(struct reg_resp);
 
-	bzero(&message,sizeof(struct reg_msg));
+	memset(&message,0,message_len);
 	strncpy((char *)&message.password,server_opts->password,15);
 	strncpy((char *)&message.username,server_opts->username,13);
 	message.tcp_port = server_opts->local_port;
@@ -80,7 +79,7 @@ void *registration_thread(void *arg) {
 	while (1) {
   		/* what do you know huh, porting programs does reveal bugs */
 		addr_len=sizeof(struct sockaddr_in);
-		bzero(&tmp_user_list,MAX_USERS*sizeof(struct user));
+		memset(&tmp_user_list,0,MAX_USERS*sizeof(struct user));
 
 		/* printf("sending registration message to server..."); */
 		if (sendto(socket_fd, &message, message_len, 0,

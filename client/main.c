@@ -60,79 +60,60 @@ int main (int argc, char **argv) {
 		       registration_thread,
 		       &opts);
 
-	/* create a background thread to listen for incoming connections. */
-	pthread_t server;
-	pthread_create(&server,
-		       NULL,
-		       server_thread,
-		       &server_socket);
-
-	/* loop on the input prompt, waiting for commands */
+	/* main loop */
 	char input[INPUT_LEN];
-	char arg1[INPUT_LEN];
-	char arg2[INPUT_LEN];
-	int tmp;
-	while (1) {
-		bzero(input,INPUT_LEN*sizeof(char));
-		printf_threadsafe("> ");
-		fgets(input,INPUT_LEN,stdin);
-		if (strncmp(input,"\n",INPUT_LEN) == 0) {
-			continue;
-		} else if (strncmp(input,"msg ",4) == 0) {
-			strncpy(arg1,&(input[4]),INPUT_LEN-4);
-			broadcast_message(arg1);
-		} else if (strncmp(input,"msg/",4) == 0 &&
-			   sscanf(input, "msg/" USERNAME_SCAN_FMT " %n",
-				  arg1,&tmp) >= 1) {
-			/* the '%n' directive in scanf returns the number of
-			 * characters that have been processed so far. It's
-			 * undefined how it affects the return value, so check
-			 * for >= 1. */
-			strncpy(arg2,&(input[tmp]),INPUT_LEN-tmp);
-			send_message(arg1,arg2);
-		} else if (strncmp(input,"list\n",5) == 0) {
-			print_user_list();
-		} else if (strncmp(input,"update\n",7) == 0) {
-			pthread_cond_signal(&registration_update);
-		} else if (strncmp(input,"connect ",8) == 0 &&
-			   sscanf(input,"connect " USERNAME_SCAN_FMT "\n",
-				  arg1) == 1) {
-			/* Remember to set the specifier length for the above
-			 * scanf to USERNAME_LEN.
-			 *
-			 * Initialize a TCP connection with a given user. */
-			connect_user(arg1);
-		} else if (strncmp(input,"disconnect ",11) == 0 &&
-			   sscanf(input,"disconnect " USERNAME_SCAN_FMT "\n",
-				  arg1) == 1) {
-			disconnect(arg1);
-		} else if (strncmp(input,"block ",6) == 0 &&
-			   sscanf(input,"block " USERNAME_SCAN_FMT "\n",
-				  arg1) == 1) {
-			block(arg1);
-		} else if (strncmp(input,"unblock ",8) == 0 &&
-			   sscanf(input,"unblock " USERNAME_SCAN_FMT "\n",
-				  arg1) == 1) {
-			unblock(arg1);
-		} else if (strncmp(input,"help",4) == 0) {
-			help();
-		} else if (strncmp(input,"quit\n",5) == 0 ||
-			   strncmp(input,"bye\n",4) == 0 ||
-			   strlen(input) == 0) {
-			/* if the length of the input is 0, someone hit
-			 * Ctrl-D */
-			break;
-		} else {
-			/* the 'ed' school of error reporting. */
-			printf_threadsafe("Unknown or invalid command.\n");
+	int i;
+	int quit = 0;
+	fd_set fds;
+	int max_fd;
+
+	printf("> ");
+	fflush(stdout);
+
+	while (!quit) {
+		/* build up fd list from user list */
+		FD_ZERO(&fds);
+		FD_SET(server_socket,&fds); /* for incoming connections */
+		FD_SET(STDIN_FILENO,&fds);  /* for user input */
+		max_fd = server_socket;
+		/* BEGIN UNSAFE CONCURRENT STUFF */
+		pthread_mutex_lock(&user_list_lock); 		/* NUMBER 1 */
+		for (i = 0; i < num_users; i++) {
+			if (user_list[i].flags & USER_CONNECTED) {
+				FD_SET(user_list[i].socket,&fds);
+				if (user_list[i].socket > max_fd) {
+					max_fd = user_list[i].socket;
+				}
+			}
+
+		}
+		pthread_mutex_unlock(&user_list_lock);
+		/* END UNSAFE CONCURRENT STUFF */
+
+		/* poll! */
+		if (select(max_fd+1,&fds,NULL,NULL,NULL) == -1) {
+			perror("select failed");
+		}
+
+		/* look to see which socket was activated */
+		for (i = 0; i <= max_fd; i++) {
+			if (FD_ISSET(i,&fds)) {
+				if (i == STDIN_FILENO) {
+					fgets(input,INPUT_LEN,stdin);
+					quit = execute_command(input);
+					bzero(input,INPUT_LEN*sizeof(char));
+				} else if (i == server_socket) {
+					accept_new_connection(i);
+				} else {
+					receive_message(i);
+				}
+			}
 		}
 	}
 
 	/* stop all threads */
-	pthread_cancel(server);
 	pthread_cancel(registration);
 	/* shutdown all the open sockets */
-	int i;
 	for (i = 0; i < num_users; i++) {
 		if (user_list[i].socket != 0) {
 			close(user_list[i].socket);

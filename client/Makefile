@@ -1,7 +1,7 @@
 DEBUG = -g
 LIBS = -pthread
 CFLAGS = -Wall -Werror $(DEBUG)
-SRC = main.c options.c registration.c client.c server.c user.c commands.c
+SRC = main.c options.c registration.c connection.c user.c commands.c
 HEADERS = options.h registration.h connection.h user.h console.h commands.h
 OBJ = $(SRC:.c=.o)
 BIN = mchat
@@ -17,9 +17,8 @@ main: $(OBJ) $(HEADERS)
 user.c: user.h console.h
 options.c: options.h
 registraction.c: user.h options.h registration.h
-server.c: user.h options.h console.h connection.h
-client.c: user.h options.h console.h connection.h
-commands.c: user.h console.h commands.h
+connection.c: user.h options.h console.h connection.h
+commands.c: user.h console.h commands.h connection.h registration.h
 
 clean:
 	rm -f $(OBJ)

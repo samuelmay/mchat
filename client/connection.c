@@ -1,11 +1,10 @@
 /*
- * server.c
+ * connection.c
  *
  * Sam May
- * 22/09/09
+ * 06/10/09
  *
- * This file contains the code for accepting a connection from another chat
- * user.
+ * Code managing TCP network connections
  *
  */
 
@@ -18,8 +17,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/select.h>
-#include <sys/time.h>
 
 #include "user.h"
 #include "options.h"
@@ -65,69 +62,6 @@ int start_listening(struct options *opts) {
 	return s;
 }
 
-
-void *server_thread(void *arg) {
-	int server_socket = *((int *)arg);
-	int i;
-	fd_set fds;
-	int max_fd;
-	struct timeval timeout;
-
-	/* start our main 'select' loop */
-	while (1) {
-		/* build up fd list from user list */
-		FD_ZERO(&fds);
-		FD_SET(server_socket,&fds);
-		max_fd = server_socket;
-		/* BEGIN UNSAFE CONCURRENT STUFF */
-		pthread_mutex_lock(&user_list_lock); 		/* NUMBER 1 */
-		for (i = 0; i < num_users; i++) {
-			if (user_list[i].flags & USER_CONNECTED) {
-				FD_SET(user_list[i].socket,&fds);
-				if (user_list[i].socket > max_fd) {
-					max_fd = user_list[i].socket;
-				}
-			} else if (user_list[i].socket != 0) {
-				/* this user was marked as disconnected, but the
-				 * socket was left open for us to close. Only
-				 * the server thread should close sockets, as
-				 * it's undefined if a socket is closed while we
-				 * are in the middle of a 'select'. */
-				close(user_list[i].socket);
-				user_list[i].socket = 0;
-			}
-
-		}
-		pthread_mutex_unlock(&user_list_lock);
-		/* END UNSAFE CONCURRENT STUFF */
-
-		/* update the fd listening set every second. It's important to have this
-		 * timeout, otherwise the list will never be updated with new outgoing
-		 * connections made by client_connect(). We need to set this every time
-		 * select() is called, as it is modified on success. */
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-
-		/* poll! */
-		if (select(max_fd+1,&fds,NULL,NULL,&timeout) == -1) {
-			perror("select failed");
-		}
-
-		/* look to see which socket was activated */
-		for (i = 0; i <= max_fd; i++) {
-			if (FD_ISSET(i,&fds)) {
-				if (i == server_socket) {
-					accept_new_connection(i);
-				} else {
-					receive_message(i);
-				}
-			}
-		}
-	}
-
-	return NULL;
-}
-
 void accept_new_connection(int fd) {
 	int s;
 	int i;
@@ -159,6 +93,7 @@ void accept_new_connection(int fd) {
 	/* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
 
+	/* This logic is horrible and the 'cancel' flag is a hack. Sorry. */
 	if ((i = lookup_user(remote_user)) < 0) {
 		/* they're not on the user list. close unknown connection. */
 		strncpy(ack,"UNKNOWN",8);
@@ -172,8 +107,6 @@ void accept_new_connection(int fd) {
 		cancel = 0;
 	}
 
-	/* bit nervous about blocking on IO whilst holding the main lock. should
-	 * be ok? .... */
 	if (send(s,ack,MESSAGE_LEN,0) < MESSAGE_LEN) {
 		fprintf(stderr,"failed to send connection ack\n");
 		cancel = 1;
@@ -184,9 +117,11 @@ void accept_new_connection(int fd) {
 	} else {
 		user_list[i].flags |= USER_CONNECTED; /* set the bit */
 		user_list[i].socket = s;
-		printf_threadsafe("\naccepted incoming connection from "
-				  USERNAME_PRINT_FMT ".",
-				  remote_user);
+		printf("\naccepted incoming connection from "
+		       USERNAME_PRINT_FMT ".",
+		       remote_user);
+		fflush(stdout);	/* needed to force display if we don't print a
+				 * newline */
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
@@ -220,11 +155,13 @@ void receive_message(int fd) {
 			user_list[i].socket = 0;
 		}
 
-		printf_threadsafe("\n" USERNAME_PRINT_FMT
-				  " closed their connection.",
-				  user_list[i].name);
+		printf("\n" USERNAME_PRINT_FMT " closed their connection.",
+		       user_list[i].name);
+		fflush(stdout);
 
-		close(fd);
+		if (close(fd) < 0) {
+			perror("recieve message");
+		}
 		pthread_mutex_unlock(&user_list_lock);
 		/* UNSAFE CONCURRENT STUFF ENDS */
 	} else {
@@ -238,11 +175,140 @@ void receive_message(int fd) {
 			buffer[i-1] = '\0';
 		}
 
-		printf_threadsafe("\n" USERNAME_PRINT_FMT " says: "
-				  INPUT_PRINT_FMT,
-				  remote_user,
-				  buffer);
+		printf("\n" USERNAME_PRINT_FMT " says: " INPUT_PRINT_FMT,
+		       remote_user, buffer);
+		fflush(stdout);
 	}
 
+	return;
+}
+
+void connect_user(char remote_user[USERNAME_LEN]) {
+	int s;
+	int i;
+	struct sockaddr_in server_addr;
+	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
+	char ack[MESSAGE_LEN];
+	int cancel = 1;		/* we set this to zero if we have a successful
+				 * outcome. */
+
+	bzero(server_addr_p,sizeof(struct sockaddr_in));
+
+        /* UNSAFE CONCURRENT STUFF BEGINS */
+	pthread_mutex_lock(&user_list_lock);
+	i = lookup_user(remote_user);
+	if (i < 0) {
+		printf("that user's not logged in!\n");
+	} else if (user_list[i].socket != 0) {
+		printf("you're already connected to that user!\n");
+	} else {
+		server_addr.sin_family = AF_INET;
+		server_addr.sin_port = user_list[i].port;
+		server_addr.sin_addr.s_addr = user_list[i].ip;
+		/* SO MUCH GORRAM ERROR HANDLING, INVENT EXCEPTIONS ALREADY */
+		if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0 ||
+		    connect(s,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
+			perror("could not connect to server");
+		} else if (send(s,opts.username,USERNAME_LEN,0)
+			   < USERNAME_LEN) {
+			perror("failed to send username to open new "
+			       "connection");
+		} else if (recv(s,ack,MESSAGE_LEN,0)
+			   < MESSAGE_LEN) {
+			perror("failed to recieve ack");
+		} else if (strncmp(ack,"UNKNOWN",MESSAGE_LEN) == 0) {
+			printf(USERNAME_PRINT_FMT
+			       " says they don't know you.\n",
+			       remote_user);
+		} else if (strncmp(ack,"BLOCKED",MESSAGE_LEN) == 0) {
+			printf(USERNAME_PRINT_FMT " has blocked you!\n",
+			       remote_user);
+		} else if (strncmp(ack,"HI",MESSAGE_LEN) == 0) {
+			printf("connecting to user " USERNAME_PRINT_FMT "\n",
+			       remote_user);
+			/* enter our new connection! */
+			user_list[i].flags |= USER_CONNECTED;
+			user_list[i].socket = s;
+			cancel = 0;
+		} else {
+			fprintf(stderr,"unknown ack recieved.\n");
+		}
+	}
+	pthread_mutex_unlock(&user_list_lock);
+	/* UNSAFE CONCURRENT STUFF ENDS */
+
+	if (cancel) {
+		close(s);
+	}
+
+	return;
+}
+
+void disconnect_user(char remote_user[USERNAME_LEN]) {
+	int i;
+	/* BEGIN UNSAFE CONCURRENT STUFF */
+	pthread_mutex_lock(&user_list_lock);
+	i = lookup_user(remote_user);
+	if (i < 0) {
+		printf("that user's not logged in!\n");
+	} else if (!(user_list[i].flags & USER_CONNECTED)) {
+		printf("you're not connected to that user!\n");
+	} else {
+		if (close(user_list[i].socket) < 0) {
+			perror("disconnect user");
+		}
+		user_list[i].flags &= ~USER_CONNECTED;
+		user_list[i].socket = 0;
+		printf(USERNAME_PRINT_FMT " was disconnected.\n",
+		       remote_user);
+	}
+	pthread_mutex_unlock(&user_list_lock);
+	/* END UNSAFE CONCURRENT STUFF */
+	return;
+}
+
+void broadcast_message(char message[INPUT_LEN]) {
+	int i;
+        /* UNSAFE CONCURRENT STUFF BEGINS */
+	pthread_mutex_lock(&user_list_lock);
+	for (i = 0; i < num_users; i++) {
+		if (user_list[i].flags & USER_CONNECTED) {
+			/* first send our username, then send the message */
+			if (send(user_list[i].socket,
+				 opts.username,
+				 USERNAME_LEN,
+				 0) < USERNAME_LEN ||
+			    send(user_list[i].socket,
+				 message,
+				 INPUT_LEN,
+				 0) < INPUT_LEN) {
+				perror("failed to send message");
+			}
+		}
+	}
+	pthread_mutex_unlock(&user_list_lock);
+	/* UNSAFE CONCURRENT STUFF ENDS */
+	return;
+}
+
+void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]) {
+	int i;
+	pthread_mutex_lock(&user_list_lock);
+	i = lookup_user(remote_user);
+	if (i < 0) {
+		printf("that user's not logged in!\n");
+	} else if (!(user_list[i].flags & USER_CONNECTED)) {
+		printf("you're not connected to that user!\n");
+	} else if (send(user_list[i].socket,
+			opts.username,
+			USERNAME_LEN,
+			0) < USERNAME_LEN ||
+		   send(user_list[i].socket,
+			message,
+			INPUT_LEN,
+			0) < INPUT_LEN) {
+		perror("failed to send message");
+	}
+	pthread_mutex_unlock(&user_list_lock);
 	return;
 }

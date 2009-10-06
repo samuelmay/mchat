@@ -34,7 +34,6 @@ void print_user_list(void) {
 
         /* UNSAFE CONCURRENT STUFF BEGINS */	
 	pthread_mutex_lock(&user_list_lock); /* NUMBER 1 */
-	pthread_mutex_lock(&console_lock);   /* NUMBER 2 */
 	printf("%14s %15s %6s\n","USERNAME","IP ADDRESS","PORT");
 	for (i = 0; i < num_users && i < 50; i++) {
 		username = (char *)&(user_list[i].name);
@@ -49,7 +48,6 @@ void print_user_list(void) {
 		}
 		printf("\n");
 	}
-	pthread_mutex_unlock(&console_lock);   /* NUMBER 2 */
 	pthread_mutex_unlock(&user_list_lock); /* NUMBER 1 */
 	/* UNSAFE CONCURRENT STUFF ENDS */
 	

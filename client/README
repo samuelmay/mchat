@@ -1,102 +1,134 @@
-Compilation
------------
+==== Compilation ====
 
 Should compile cleanly on 32 and 64-bit Linux, and Mac OS X Snow Leopard. Also
 compiles on Cygwin, but you must either use 'make -DLIBS=""', or edit the
 makefile and remove '-pthread' from the LIBS variable.
 
-Threads
--------
+==== Threads ====
 
-* Main thread: Console loop. Dispatches commands, as detailed in 'COMMANDS'
-  section.
-  FILES: main.c, commands.c, client.c
+== Main thread ==
 
-* Registration thread: simply throws a UDP packet at the registration server
-  every 30 seconds, updates the user list with the response (carefully!), and
-  goes back to sleep (actually, waits on a condition variable with a 30s
-  timeout, so we can force an update right now by activating the condition
-  variable).
-  FILES: registration.c
+Loop polling the server socket, all open connection sockets, and console input
+using select().  If the server socket has an event, accept a new connection.  If
+an open connection socket has an event, recieve a message and print it to the
+screen, or close the connection.  If console input has an event, read a line and
+dispatch the command, as detailed in the 'Commands' section.  
 
-* Incoming connection server: uses select() to wait for a readable socket, and
-  either a) accepts a new connection and notifies user b) cleans up a closed
-  socket or c) receives message and writes to the console.
-  FILES: server.c
+FILES: main.c, commands.c, connection.c
 
-Resources
----------
+== Registration thread ==
 
-(Globally visible, require mutex/locks to access)
+Simply throws a UDP packet at the registration server every 30 seconds, updates
+the user list with the response (carefully!), and goes back to sleep (actually,
+waits on a condition variable with a 30s timeout, so we can force an update
+right now by activating the condition variable).
 
-User list: Main list of users. Code in user.c and user.h An array of 'struct
-user', sorted by username, along with an int 'num_users' holding the number of
-entries. Two search functions exist: lookup_user(), which searches for a
-username using binary search (fast!), and lookup_socket(), which searches for a
-file descriptor linearly (slow, used only once in server.c when a connection is
-closed).
+FILES: registration.c
 
-Output console: stdout. We want all printing to the screen to be in coherent
-blocks. (TODO possibly lock when reading stdin as well?)
+==== Resources ====
 
-Startup
--------
+== User List ==
+
+Main globally-visible list of users. Code in user.c and user.h An array of
+'struct user', sorted by username, along with an int 'num_users' holding the
+number of entries.
+
+Two search functions exist: lookup_user(), which searches for a username using
+binary search (fast!), and lookup_socket(), which searches for a file descriptor
+linearly (slow, used only once in connection.c when a connection is closed).
+
+Used by both threads, and so requires a lock to access. The locking is currently
+very fine-grained (and complex) because there used to be three threads accessing
+it. TODO might (MIGHT!) be able to simplify locking and have much larger
+critical regions, simplifying code and hopefully less bug-prone.
+
+==== Startup ====
 
 * parse command line as per 'options.c', putting results in options struct.
 
-* create and bind listening socket. if no port was specified, get random free
-  port.
+* create and bind listening socket as per 'start_listening()' in
+  'connection.c'. if no port was specified, get random free port.
 
-* start server thread:
+* start registration thread, found in 'registration.c'
 
-* start registration thread
+* start main loop in 'main.c'. Call functions in 'connection.c' and 'commands.c'
 
-* start command loop.
+==== Protocol ====
 
-Commands
---------
+== Opening a Connection ==
 
-* list: print out the user list
-  FILES: user.c
-  FUNCTIONS: print_user_list()
-  PROCEDURE: Loop through user list and print to console.
+The local user (acting as the client) will open the connection on the TCP port
+specified in the remote user's (acting as the server) user list entry. 
 
-* update: force update of user list
-  FILES: main.c
-  FUNCTIONS:
-  PROCEDURE: set condition variable for registration thread so it wakes and
-  updates now.
+Then, the client sends a string of length USERNAME_LEN (found in user.h)
+containing their username.
 
-* connect <username>: initiate connection with someone on the user list
-  FILES: client.c
-  FUNCTIONS: connect_user()
-  PROCEDURE: Check if that's a logged-on user; Check if we don't already have a
-  connection; if not, create connection and set 'connected' flag.
+The server will recieve this string, look up the client in their user list, and
+send a reply of length MESSAGE_LEN (found in connection.h).
 
-* disconnect <username>: disconnect with someone
-  FILES: commands.c
-  FUNCTIONS: disconnect()
-  PROCEDURE: Check if we have a connection, if so, clear 'connected' flag in
-  the user entry; the server thread will garbage collect the socket.
+If the client is not in the server's user list, the server sends "UNKNOWN" and closes the
+connection.
 
-* msg: send message to all connected users. TODO: allow messages to individual 
-  connected users.
-  FILES: client.c
-  FUNCTIONS: broadcast_message().
-  PROCEDURE: send buffer to each open socket in turn.
+If the client is in the server's user list, but marked as 'blocked', the server
+sends "BLOCKED" and closes the connection.
 
-* quit/bye/Ctrl-D: exit
-  FILES: main.c
-  FUNCTIONS:
-  PROCEDURE: kill all threads, close all open sockets.
+Otherwise, the server sends "HI" and leaves the connection open.
 
-* block/unblock: block a user from connecting to you
-  FILES: commands.c
-  FUNCTIONS: block() unblock()
-  PROCEDURE: if a valid user, set/clear 'blocked' flag in user entry.
+== Sending a Message ==
 
-* help: self-explanatory.
-  FILES: commands.c
-  FUNCTIONS: help()
-  PROCEDURE: print out help.
+A message should consist of a string of length USERNAME_LEN containing the
+username of the sending user, followed by a string of length INPUT_LEN
+containing the message text.
 
+==== Commands ====
+
+== list== 
+Loop through the user list and print information about each entry to console.
+FILES: user.c
+FUNCTIONS: print_user_list()
+
+== update ==
+Force update of user list. Set condition variable for registration thread so it
+wakes and updates now.
+FILES: main.c
+FUNCTIONS:
+
+== connect <username> ==
+Initiate connection with someone on the user list. Check if that's a logged-on
+user; check if we don't already have a connection; if not, create connection and
+set 'connected' flag.
+FILES: connection.c
+FUNCTIONS: connect_user()
+
+== disconnect <username> ==
+Disconnect with someone. Check if we have a connection, if so, close socket and
+clear 'connected' flag and socket fd in the user entry.
+FILES: commands.c
+FUNCTIONS: disconnect_user()
+
+== msg <text> == 
+Send message to all connected users. Loop through user list and send message to
+each valid socket fd found.
+FILES: connection.c
+FUNCTIONS: broadcast_message().
+
+== msg/<user> <text> == 
+Send message to an individual connected user. If a valid user, send message to
+the socket fd in their user list entry.
+FILES: connection.c
+FUNCTIONS: send_message()
+
+== quit/bye/Ctrl-D ==
+Exit program. Break main loop, cancel all threads, close all open sockets.
+FILES: main.c
+FUNCTIONS:
+
+== block/unblock <user> ==
+Block a user from connecting to you. If a valid user, set/clear 'blocked' flag in user entry.
+FILES: commands.c
+FUNCTIONS: block() unblock()
+
+== help ==
+Print out help.
+FILES: commands.c
+FUNCTIONS: help()

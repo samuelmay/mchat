@@ -220,10 +220,6 @@ void broadcast_message(char message[INPUT_LEN]) {
 		if (user_list[i].flags & USER_CONNECTED) {
 			/* first send our username, then send the message */
 			if (send(user_list[i].socket,
-				 opts.username,
-				 USERNAME_LEN,
-				 0) < USERNAME_LEN ||
-			    send(user_list[i].socket,
 				 message,
 				 INPUT_LEN,
 				 0) < INPUT_LEN) {
@@ -245,10 +241,6 @@ void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]) {
 	} else if (!(user_list[i].flags & USER_CONNECTED)) {
 		printf("you're not connected to that user!\n");
 	} else if (send(user_list[i].socket,
-			opts.username,
-			USERNAME_LEN,
-			0) < USERNAME_LEN ||
-		   send(user_list[i].socket,
 			message,
 			INPUT_LEN,
 			0) < INPUT_LEN) {

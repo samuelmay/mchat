@@ -125,3 +125,17 @@ int main (int argc, char **argv) {
 	return 0;
 }
 
+/* c.f. Perl function of the same name. If last character in a string is a
+ * newline, remove it. */
+void chomp(char *string, size_t maxlen) {
+	/* surprisingly, strnlen is not portable to BSD (i.e. OS X). Do
+	 * it by hand */
+	/* i = strnlen(buffer,maxlen); */ 
+	char *p = memchr(string,0,maxlen);
+	int i = p ? p - string : maxlen;
+	
+	if (string[i-1] == '\n') {
+		string[i-1] = '\0';
+	}
+	return;
+}

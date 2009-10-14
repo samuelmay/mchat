@@ -133,12 +133,7 @@ void receive_message(int fd) {
 		/* Everything is good! Print out the recieved message and the
 		 * user that sent it. */
 
-		/* 'chomp' string. If the last character is a newline, remove
-		 * it. */
-		i = strnlen(buffer,INPUT_LEN);
-		if (buffer[i-1] == '\n') {
-			buffer[i-1] = '\0';
-		}
+		chomp(buffer,INPUT_LEN);
 
 		pthread_mutex_lock(&user_list_lock);
 		if ((i = lookup_socket(fd)) < 0) {

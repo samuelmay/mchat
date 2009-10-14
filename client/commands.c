@@ -95,7 +95,11 @@ void block(char user[USERNAME_LEN]) {
 		user_list[i].flags |= USER_BLOCKED;
                 /* disconnect them as well */
 		if (user_list[i].flags & USER_CONNECTED) {
-			disconnect_user(user);
+			if (close(user_list[i].socket) < 0) {
+				perror("disconnect user");
+			}
+			user_list[i].flags &= ~USER_CONNECTED;
+			user_list[i].socket = 0;
 		}
 		printf(USERNAME_PRINT_FMT " was blocked.\n", user);
 	}

@@ -72,8 +72,10 @@ void accept_new_connection(int fd) {
 
 	memset(client_addr_p,0,client_addr_len);
 	if ((s = accept(fd,client_addr_p,&client_addr_len)) < 0) {
-		perror("failed to accept connection");
-		close(s);
+		perror("accept new connection");
+		if (close(s) < 0) {
+			perror("accept new connection");
+		}
 		return;
 	}
 
@@ -84,7 +86,9 @@ void accept_new_connection(int fd) {
 	if ((i = lookup_ip(client_addr.sin_addr.s_addr)) < 0 ||
 	    user_list[i].flags & USER_BLOCKED) {
 		/* they're not on the user list, or they're not wanted. close connection. */
-		close(s); 
+		if (close(s) < 0) {
+			perror("accept new connection");
+		}
 	} else {
 		user_list[i].flags |= USER_CONNECTED; /* set the bit */
 		user_list[i].socket = s;
@@ -174,7 +178,9 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 		if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0 ||
 		    connect(s,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
 			perror("could not connect to server");
-			close(s);
+			if (close(s) < 0) {
+				perror("connect user");
+			}
 		} else {
 			printf("connecting to user " USERNAME_PRINT_FMT "\n",
 			       remote_user);

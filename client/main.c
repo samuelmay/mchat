@@ -112,9 +112,10 @@ int main (int argc, char **argv) {
 		}
 	}
 
-	/* stop all threads */
+	/* Stop all threads. Don't care about errors and return values at this
+	 * point really. */
 	pthread_cancel(registration);
-	/* shutdown all the open sockets */
+	/* Shutdown all the open sockets. */
 	for (i = 0; i < num_users; i++) {
 		if (user_list[i].socket != 0) {
 			close(user_list[i].socket);
@@ -130,10 +131,10 @@ int main (int argc, char **argv) {
 void chomp(char *string, size_t maxlen) {
 	/* surprisingly, strnlen is not portable to BSD (i.e. OS X). Do
 	 * it by hand */
-	/* i = strnlen(buffer,maxlen); */ 
+	/* i = strnlen(buffer,maxlen); */
 	char *p = memchr(string,0,maxlen);
 	int i = p ? p - string : maxlen;
-	
+
 	if (string[i-1] == '\n') {
 		string[i-1] = '\0';
 	}

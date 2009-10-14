@@ -23,30 +23,39 @@
 #include "console.h"
 #include "connection.h"
 
+/* Start listening for incoming connections on a local port */
 int start_listening(struct options *opts) {
-	/* create socket and start listening for incoming connections */
+	/* create socket */
 	int s;
 	if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0) {
 		perror("listening socket creation failed");
 		exit(EXIT_FAILURE);
 	}
 
+	/* 'sockaddr_in' is short for 'socket address [for] internet' */
 	struct sockaddr_in server_addr;
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
 	socklen_t len = sizeof(struct sockaddr_in);
-	memset(server_addr_p,0,len);
 
+	/* Populate address struct */
+	memset(server_addr_p,0,len);
+        /* This is an Internet Protocol socket */
 	server_addr.sin_family = AF_INET;
+        /* Magic */
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        /* the port we will listen on */
 	server_addr.sin_port = opts->local_port;
 
+	/* Bind created socket to port specified in address struct */
 	if (bind(s,server_addr_p,len) < 0) {
 		perror("failed to bind listening socket");
 		exit(EXIT_FAILURE);
 	}
 
-	/* since we binded to any free port, get the actual port we binded to,
-	 * and set the options we will send to the registration server */
+	/* If the specified port was zero, (i.e. the user didn't specify it), we
+	 * were bound to a random free port. Get the actual port we binded to,
+	 * and update the options (which we will send to the registration
+	 * server) */
 	if (getsockname(s,server_addr_p,&len) < 0) {
 		perror("could not get port from bind");
 		exit(EXIT_FAILURE);
@@ -54,6 +63,7 @@ int start_listening(struct options *opts) {
 	opts->local_port = server_addr.sin_port;
 	opts->local_port_h = ntohs(server_addr.sin_port);
 
+	/* start listening for incoming connections. */
 	if (listen(s,10) < 0) {
 		perror("failed to listen on listening socket");
 		exit(EXIT_FAILURE);
@@ -62,10 +72,14 @@ int start_listening(struct options *opts) {
 	return s;
 }
 
+/* Accept an incoming connection from another user, given the file descriptor we
+ * were listening on. */
 void accept_new_connection(int fd) {
 	int s;
 	int i;
 
+	/* Create address struct to hold details of incoming connection. The
+	 * call to accept() will populate it. */
 	struct sockaddr_in client_addr;
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
 	socklen_t client_addr_len = sizeof(struct sockaddr_in);
@@ -90,31 +104,37 @@ void accept_new_connection(int fd) {
 			perror("accept new connection");
 		}
 	} else {
-		user_list[i].flags |= USER_CONNECTED; /* set the bit */
+		/* set the bit */
+		user_list[i].flags |= USER_CONNECTED;
+		/* store the socket (file descriptor) */
 		user_list[i].socket = s;
 		printf("\naccepted incoming connection from "
 		       USERNAME_PRINT_FMT ".",
 		       user_list[i].name);
-		fflush(stdout);	/* needed to force display if we don't print a
-				 * newline */
+		fflush(stdout);	/* needed to force output to screen if we don't
+				 * print a newline */
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
 	return;
 }
 
+/* receive an incoming message from a remote user that we are connected to,
+ * given their socket / file descriptor */
 void receive_message(int fd) {
 	char buffer[INPUT_LEN];
 	int i;
 	int retval;
 
+	/* Do a read on the socket. recv() returns the length of the recieved
+	 * string. */
 	if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN &&
 	    retval != 0) {
-		/* short read on message */
+		/* length was shorter than specified; read was incomplete */
 		perror("failed to receive message.");
 	} else if (retval == 0) {
-                /* closed connection at remote end. close socket and remove from
-                 * user list. */
+                /* Connection was closed at remote end. Close socket and remove
+                 * from user list. */
 		/* UNSAFE CONCURRENT STUFF BEGINS */
 		pthread_mutex_lock(&user_list_lock);
 		/* We don't care if they're not on the user list, seeing as
@@ -155,6 +175,7 @@ void receive_message(int fd) {
 	return;
 }
 
+/* Initiate a connection to a remote user */
 void connect_user(char remote_user[USERNAME_LEN]) {
 	int s;
 	int i;
@@ -171,12 +192,16 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 	} else if (user_list[i].socket != 0) {
 		printf("you're already connected to that user!\n");
 	} else {
+		/* Populate address struct from user entry */
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_port = user_list[i].port;
 		server_addr.sin_addr.s_addr = user_list[i].ip;
 
+		/* create socket for connection, then call connect() with it and
+		 * the address struct. */
 		if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0 ||
 		    connect(s,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
+			/* fail */
 			perror("could not connect to server");
 			if (close(s) < 0) {
 				perror("connect user");
@@ -184,7 +209,7 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 		} else {
 			printf("connecting to user " USERNAME_PRINT_FMT "\n",
 			       remote_user);
-			/* enter our new connection! */
+			/* Update user list entry with new connection details */
 			user_list[i].flags |= USER_CONNECTED;
 			user_list[i].socket = s;
 		}
@@ -195,6 +220,7 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 	return;
 }
 
+/* Terminate a connection with a remote user */
 void disconnect_user(char remote_user[USERNAME_LEN]) {
 	int i;
 	/* BEGIN UNSAFE CONCURRENT STUFF */
@@ -205,6 +231,8 @@ void disconnect_user(char remote_user[USERNAME_LEN]) {
 	} else if (!(user_list[i].flags & USER_CONNECTED)) {
 		printf("you're not connected to that user!\n");
 	} else {
+		/* Just call close on the socket like any old file, then clear
+		 * the connection details from the user list entry. */
 		if (close(user_list[i].socket) < 0) {
 			perror("disconnect user");
 		}
@@ -224,7 +252,7 @@ void broadcast_message(char message[INPUT_LEN]) {
 	pthread_mutex_lock(&user_list_lock);
 	for (i = 0; i < num_users; i++) {
 		if (user_list[i].flags & USER_CONNECTED) {
-			/* first send our username, then send the message */
+			/* Send the message. */
 			if (send(user_list[i].socket,
 				 message,
 				 INPUT_LEN,
@@ -246,7 +274,7 @@ void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]) {
 		printf("that user's not logged in!\n");
 	} else if (!(user_list[i].flags & USER_CONNECTED)) {
 		printf("you're not connected to that user!\n");
-	} else if (send(user_list[i].socket,
+	} else if (send(user_list[i].socket,		/* send the message */
 			message,
 			INPUT_LEN,
 			0) < INPUT_LEN) {

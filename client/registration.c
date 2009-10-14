@@ -27,9 +27,9 @@
  **********************/
 pthread_mutex_t registration_update_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t registration_update = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t registration_update_lock; /* for some reason a mutex must always be
-				     * used with a condition variable. DO NOT
-				     * USE */
+pthread_mutex_t registration_update_lock; /* for some reason a mutex must always
+					   * be used with a condition
+					   * variable. DO NOT USE */
 
 void *registration_thread(void *arg) {
 	struct options *server_opts = arg;
@@ -37,16 +37,16 @@ void *registration_thread(void *arg) {
 	u_int32_t i;
 	int j;
 
-	/* we build a new user list from the server response here, before
-	 * copying it over to the real one. */
+	/* we build a temporary new user list from the server response here,
+	 * before copying it over to the real one. */
 	struct user tmp_user_list[MAX_USERS];
 
-	/* structs for dealing with time and sleeping */
+	/* misc structs for dealing with time and sleeping */
 	int retval;
 	struct timespec timeout;
 	struct timeval time;
 
-	/* acquire condition variable lock */
+	/* Acquire the condition variable lock. Magic concurrent stuff. */
 	pthread_mutex_lock(&registration_update_lock);
 
 	/* create socket */
@@ -61,6 +61,7 @@ void *registration_thread(void *arg) {
 	socklen_t addr_len;
 	memset(&reg_addr,0,sizeof(struct sockaddr_in));
 	reg_addr.sin_family = AF_INET;
+	/* Port and IP address of login server  */
 	reg_addr.sin_port = server_opts->server_port;
 	reg_addr.sin_addr = server_opts->ip;
 
@@ -87,7 +88,8 @@ void *registration_thread(void *arg) {
 			perror("failed to send message to registration server");
 		}
 
-		/* we don't know the recieved message length */
+		/* We don't know the recieved message length, so we
+		 * unfortunately can't check for an incomplete read error. */
 		if (recvfrom(socket_fd, &response, response_len, 0,
 			     reg_addr_p, &addr_len) < 0) {
 			perror("failed to recieve response from registration server");
@@ -97,14 +99,7 @@ void *registration_thread(void *arg) {
 		/* UNSAFE CONCURRENT STUFF BEGINS */
 		pthread_mutex_lock(&user_list_lock);
 		/* copy response info into temporary user list. Use the flags
-		 * from the existing user list if they are there.
-		 *
-		 * IMPORTANT: Assume the server returns user
-		 * information in alphabetical/sorted order. I know
-		 * the current server implementation does this. CHECK
-		 * THIS ASSUMPTION otherwise the binary search used in
-		 * lookup_user() will not work.
-		 */
+		 * from the existing user list if they are there. */
 		for (i = 0; i < ntohl(response.nusers); i++) {
 			strncpy(tmp_user_list[i].name,
 				response.user[i].username,
@@ -136,6 +131,7 @@ void *registration_thread(void *arg) {
 		timeout.tv_sec = time.tv_sec + SERVER_TIMEOUT/2;
 //		timeout.tv_sec = time.tv_sec + 10;
 		timeout.tv_nsec = time.tv_usec*100;
+		/* Your standard 'sleep()' from unistd.h also works here. */
 		retval = pthread_cond_timedwait(&registration_update,
 						&registration_update_lock,
 						&timeout);

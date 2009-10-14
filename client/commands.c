@@ -92,10 +92,11 @@ void block(char user[USERNAME_LEN]) {
 	} else if (user_list[i].flags & USER_BLOCKED) {
 		printf("that user's already blocked!\n");
 	} else {
-                /* this also clears the 'connected' flag and thus disconnects
-		 * them as well */
-		user_list[i].flags &= ~USER_CONNECTED;
 		user_list[i].flags |= USER_BLOCKED;
+                /* disconnect them as well */
+		if (user_list[i].flags & USER_CONNECTED) {
+			disconnect_user(user);
+		}
 		printf(USERNAME_PRINT_FMT " was blocked.\n", user);
 	}
 	pthread_mutex_unlock(&user_list_lock);

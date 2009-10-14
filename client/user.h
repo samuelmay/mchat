@@ -21,10 +21,11 @@ struct user {
 
 /* FUNCTIONS */
 void print_user_list(void);
-/* looks up user with the given connection details. Returns index into the user
- * list if found, -1 otherwise */
+/* looks up user with the given details. Returns index into the user list if
+ * found, -1 otherwise */
 int lookup_user(char name[USERNAME_LEN]);
 int lookup_socket(int fd);
+int lookup_ip(u_int32_t ip);
 
 /* GLOBAL VARIABLES */
 extern struct user user_list[MAX_USERS];

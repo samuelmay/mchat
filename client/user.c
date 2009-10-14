@@ -51,36 +51,32 @@ void print_user_list(void) {
 	return;
 }
 
-/* binary search method */
-static int lookup_user_recursive(char name[USERNAME_LEN],int start,int end) {
-	int result = -1;
-	int mid;
-	int comp;
-	if (start <= end) {
-		mid = (start+end)/2;
-		comp = strncmp(name,user_list[mid].name,USERNAME_LEN);
-		if (comp == 0) {
-			result = mid;
-		} else if (comp < 0) {
-			result = lookup_user_recursive(name,start,mid-1);
-		} else if (comp > 0) {
-			result = lookup_user_recursive(name,mid+1,end);
-		}
-	}
-	return result;
-}
-
-
 /* looks up user list entry for the given username details. Returns the index in
  * the user list, or -1 if not found. MUST HOLD USER LIST LOCK. */
 int lookup_user(char name[USERNAME_LEN]) {
-	return lookup_user_recursive(name,0,num_users-1);
+	int i;
+	for (i = 0; i < num_users && i < 50; i++) {
+		if (strncmp(name,user_list[i].name,USERNAME_LEN) == 0) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 int lookup_socket(int fd) {
 	int i;
 	for (i = 0; i < num_users && i < 50; i++) {
 		if (user_list[i].socket == fd) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int lookup_ip(u_int32_t ip) {
+	int i;
+	for (i = 0; i < num_users && i < 50; i++) {
+		if (user_list[i].ip == ip) {
 			return i;
 		}
 	}

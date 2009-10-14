@@ -65,11 +65,6 @@ int start_listening(struct options *opts) {
 void accept_new_connection(int fd) {
 	int s;
 	int i;
-	char remote_user[USERNAME_LEN];
-	char ack[MESSAGE_LEN];
-	int cancel = 1;		/* because there is only one good outcome and
-				 * sooo many error cases, we close the socket by
-				 * default.*/
 
 	struct sockaddr_in client_addr;
 	struct sockaddr *client_addr_p = (struct sockaddr *)&client_addr;
@@ -82,44 +77,20 @@ void accept_new_connection(int fd) {
 		return;
 	}
 
-	/* they should send us their username */
-	if (recv(s,remote_user,USERNAME_LEN,0) < USERNAME_LEN) {
-		perror("failed to receive username from new connection.");
-		close(s);
-		return;
-	}
-
 	/* reverse look up user details to get username */
 	/* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
 
-	/* This logic is horrible and the 'cancel' flag is a hack. Sorry. */
-	if ((i = lookup_user(remote_user)) < 0) {
-		/* they're not on the user list. close unknown connection. */
-		strncpy(ack,"UNKNOWN",8);
-	} else if (user_list[i].flags & USER_BLOCKED) {
-		/* they're not wanted. Tell them they're blocked and close the
-		 * connection. */
-		strncpy(ack,"BLOCKED",8);
-	} else {
-		/* all good. */
-		strncpy(ack,"HI",8);
-		cancel = 0;
-	}
-
-	if (send(s,ack,MESSAGE_LEN,0) < MESSAGE_LEN) {
-		fprintf(stderr,"failed to send connection ack\n");
-		cancel = 1;
-	}
-
-	if (cancel) {
-		close(s);
+	if ((i = lookup_ip(client_addr.sin_addr.s_addr)) < 0 ||
+	    user_list[i].flags & USER_BLOCKED) {
+		/* they're not on the user list, or they're not wanted. close connection. */
+		close(s); 
 	} else {
 		user_list[i].flags |= USER_CONNECTED; /* set the bit */
 		user_list[i].socket = s;
 		printf("\naccepted incoming connection from "
 		       USERNAME_PRINT_FMT ".",
-		       remote_user);
+		       user_list[i].name);
 		fflush(stdout);	/* needed to force display if we don't print a
 				 * newline */
 	}
@@ -129,17 +100,12 @@ void accept_new_connection(int fd) {
 }
 
 void receive_message(int fd) {
-	char remote_user[USERNAME_LEN];
 	char buffer[INPUT_LEN];
 	int i;
 	int retval;
 
-	if ((retval = recv(fd,remote_user,USERNAME_LEN,0)) < USERNAME_LEN &&
+	if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN &&
 	    retval != 0) {
-		/* short read on username (message header) */
-		perror("failed to recieve username for incoming message");
-	} else if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN &&
-		   retval != 0) {
 		/* short read on message */
 		perror("failed to receive message.");
 	} else if (retval == 0) {
@@ -148,8 +114,7 @@ void receive_message(int fd) {
 		/* UNSAFE CONCURRENT STUFF BEGINS */
 		pthread_mutex_lock(&user_list_lock);
 		/* We don't care if they're not on the user list, seeing as
-		 * we're deleting them anyway. Also, look up the socket fd
-		 * because we didn't read the name. */
+		 * we're deleting them anyway. */
 		if ((i = lookup_socket(fd)) >= 0) {
 			user_list[i].flags &= ~USER_CONNECTED;/*clear the bit*/
 			user_list[i].socket = 0;
@@ -175,9 +140,17 @@ void receive_message(int fd) {
 			buffer[i-1] = '\0';
 		}
 
-		printf("\n" USERNAME_PRINT_FMT " says: " INPUT_PRINT_FMT,
-		       remote_user, buffer);
-		fflush(stdout);
+		pthread_mutex_lock(&user_list_lock);
+		if ((i = lookup_socket(fd)) < 0) {
+			/* this should never happen, as how would we have an
+			 * open connection and socket from an unknown user? */
+			perror("message from unknown user");
+		} else {
+			printf("\n" USERNAME_PRINT_FMT " says: " INPUT_PRINT_FMT,
+			       user_list[i].name, buffer);
+			fflush(stdout);
+		}
+		pthread_mutex_unlock(&user_list_lock);
 	}
 
 	return;
@@ -188,9 +161,6 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 	int i;
 	struct sockaddr_in server_addr;
 	struct sockaddr *server_addr_p = (struct sockaddr *)&server_addr;
-	char ack[MESSAGE_LEN];
-	int cancel = 1;		/* we set this to zero if we have a successful
-				 * outcome. */
 
 	memset(server_addr_p,0,sizeof(struct sockaddr_in));
 
@@ -205,41 +175,21 @@ void connect_user(char remote_user[USERNAME_LEN]) {
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_port = user_list[i].port;
 		server_addr.sin_addr.s_addr = user_list[i].ip;
-		/* SO MUCH GORRAM ERROR HANDLING, INVENT EXCEPTIONS ALREADY */
+
 		if ((s = socket(AF_INET,SOCK_STREAM,0)) < 0 ||
 		    connect(s,server_addr_p,sizeof(struct sockaddr_in)) < 0) {
 			perror("could not connect to server");
-		} else if (send(s,opts.username,USERNAME_LEN,0)
-			   < USERNAME_LEN) {
-			perror("failed to send username to open new "
-			       "connection");
-		} else if (recv(s,ack,MESSAGE_LEN,0)
-			   < MESSAGE_LEN) {
-			perror("failed to recieve ack");
-		} else if (strncmp(ack,"UNKNOWN",MESSAGE_LEN) == 0) {
-			printf(USERNAME_PRINT_FMT
-			       " says they don't know you.\n",
-			       remote_user);
-		} else if (strncmp(ack,"BLOCKED",MESSAGE_LEN) == 0) {
-			printf(USERNAME_PRINT_FMT " has blocked you!\n",
-			       remote_user);
-		} else if (strncmp(ack,"HI",MESSAGE_LEN) == 0) {
+			close(s);
+		} else {
 			printf("connecting to user " USERNAME_PRINT_FMT "\n",
 			       remote_user);
 			/* enter our new connection! */
 			user_list[i].flags |= USER_CONNECTED;
 			user_list[i].socket = s;
-			cancel = 0;
-		} else {
-			fprintf(stderr,"unknown ack recieved.\n");
 		}
 	}
 	pthread_mutex_unlock(&user_list_lock);
 	/* UNSAFE CONCURRENT STUFF ENDS */
-
-	if (cancel) {
-		close(s);
-	}
 
 	return;
 }

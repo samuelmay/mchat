@@ -124,15 +124,15 @@ void accept_new_connection(int fd) {
 void receive_message(int fd) {
 	char buffer[INPUT_LEN];
 	int i;
-	int retval;
+	int length;
 
 	/* Do a read on the socket. recv() returns the length of the recieved
 	 * string. */
-	if ((retval = recv(fd,buffer,INPUT_LEN,0)) < INPUT_LEN &&
-	    retval != 0) {
+	length = recv(fd,buffer,INPUT_LEN,0);
+	if (length < 0) {
 		/* length was shorter than specified; read was incomplete */
 		perror("failed to receive message.");
-	} else if (retval == 0) {
+	} else if (length == 0) {
                 /* Connection was closed at remote end. Close socket and remove
                  * from user list. */
 		/* UNSAFE CONCURRENT STUFF BEGINS */
@@ -157,7 +157,14 @@ void receive_message(int fd) {
 		/* Everything is good! Print out the recieved message and the
 		 * user that sent it. */
 
-		chomp(buffer,INPUT_LEN);
+		if (length < INPUT_LEN) {
+			buffer[length] = '\0';
+		}
+
+		if (buffer[length-1] == '\n') {
+			buffer[length-1] = '\0';
+		}
+
 
 		pthread_mutex_lock(&user_list_lock);
 		if ((i = lookup_socket(fd)) < 0) {
@@ -248,6 +255,9 @@ void disconnect_user(char remote_user[USERNAME_LEN]) {
 
 void broadcast_message(char message[INPUT_LEN]) {
 	int i;
+
+	size_t length = strnlen(message,INPUT_LEN);
+
         /* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
 	for (i = 0; i < num_users; i++) {
@@ -255,8 +265,8 @@ void broadcast_message(char message[INPUT_LEN]) {
 			/* Send the message. */
 			if (send(user_list[i].socket,
 				 message,
-				 INPUT_LEN,
-				 0) < INPUT_LEN) {
+				 length,
+				 0) < length) {
 				perror("failed to send message");
 			}
 		}
@@ -268,6 +278,9 @@ void broadcast_message(char message[INPUT_LEN]) {
 
 void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]) {
 	int i;
+	size_t length = strnlen(message,INPUT_LEN);
+
+	/* UNSAFE CONCURRENT STUFF BEGINS */
 	pthread_mutex_lock(&user_list_lock);
 	i = lookup_user(remote_user);
 	if (i < 0) {
@@ -276,10 +289,11 @@ void send_message(char remote_user[USERNAME_LEN],char message[INPUT_LEN]) {
 		printf("you're not connected to that user!\n");
 	} else if (send(user_list[i].socket,		/* send the message */
 			message,
-			INPUT_LEN,
-			0) < INPUT_LEN) {
+			length,
+			0) < length) {
 		perror("failed to send message");
 	}
 	pthread_mutex_unlock(&user_list_lock);
+	/* UNSAFE CONCURRENT STUFF ENDS */
 	return;
 }
